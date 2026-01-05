@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: clearpick-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_SHOPPING_API_KEY
+        sync: false
+      - key: GOOGLE_SHOPPING_CX
+        value: 8698f382d3f484175
+      - key: FRONTEND_URL
+        sync: false

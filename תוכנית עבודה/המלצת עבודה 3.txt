@@ -1,0 +1,350 @@
+# אנימציות לדף הכניסה (Landing Page) - ClearPick.ai
+
+## 1. אנימציית כניסה לעמוד (Page Load)
+
+### הלוגו (למעלה):
+```css
+.logo {
+  animation: fadeInDown 0.8s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+---
+
+### הכותרת "Something Amazing":
+```css
+.hero-title {
+  animation: fadeInUp 1s ease-out 0.2s backwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+```
+
+---
+
+### "Is Coming Soon" (הטקסט הירוק):
+```css
+.coming-soon-text {
+  animation: fadeInScale 1s ease-out 0.4s backwards;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+```
+
+---
+
+### "AI-Powered Product Intelligence":
+```css
+.subtitle {
+  animation: fadeIn 1s ease-out 0.6s backwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+```
+
+---
+
+### הטקסט התיאורי (We're building...):
+```css
+.description-text {
+  animation: fadeIn 1s ease-out 0.8s backwards;
+}
+```
+
+---
+
+### הקופסה הכחולה (Glassmorphism box):
+```css
+.waitlist-box {
+  animation: fadeInUp 1.2s ease-out 1s backwards;
+}
+```
+
+---
+
+## 2. אנימציות על אלמנטים ספציפיים
+
+### תיבת האימייל - Focus State:
+```css
+.email-input {
+  transition: all 0.3s ease;
+}
+
+.email-input:focus {
+  border-color: #00FFB3;
+  box-shadow: 0 0 20px rgba(0, 255, 179, 0.3);
+  transform: translateY(-2px);
+}
+```
+
+---
+
+### הכפתור "Join Waitlist":
+```css
+.join-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.join-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 255, 179, 0.4);
+}
+
+.join-button:active {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 255, 179, 0.3);
+}
+
+/* Ripple Effect כשלוחצים */
+.join-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.join-button:active::after {
+  width: 300px;
+  height: 300px;
+}
+```
+
+---
+
+## 3. אנימציות רקע (Background)
+
+### Pulse עדין על הטקסט "Is Coming Soon":
+```css
+.coming-soon-text {
+  animation: textPulse 3s ease-in-out infinite;
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(0, 255, 179, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(0, 255, 179, 0.6),
+                 0 0 30px rgba(0, 255, 179, 0.4);
+  }
+}
+```
+
+---
+
+### נקודות רקע מטושטשות שזזות (אופציונלי):
+```css
+.background-blob-1 {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(0, 255, 179, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  top: -100px;
+  left: -100px;
+  animation: floatBlob 20s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes floatBlob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(50px, -30px) scale(1.1);
+  }
+  66% {
+    transform: translate(-30px, 50px) scale(0.9);
+  }
+}
+
+.background-blob-2 {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  bottom: -50px;
+  right: -50px;
+  animation: floatBlob 25s ease-in-out infinite reverse;
+  z-index: -1;
+}
+```
+
+---
+
+## 4. אנימציית Loading (אם משתמש שולח אימייל)
+
+### Spinner:
+```css
+.loading-spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0, 255, 179, 0.3);
+  border-top-color: #00FFB3;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+```
+
+---
+
+### Success Message (אחרי שליחה מוצלחת):
+```css
+.success-message {
+  animation: successPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes successPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Checkmark Animation */
+.checkmark {
+  animation: drawCheck 0.5s ease-out 0.2s backwards;
+}
+
+@keyframes drawCheck {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+```
+
+---
+
+## 5. Micro-interactions נוספות
+
+### הלוגו - Hover:
+```css
+.logo:hover .logo-shield {
+  filter: drop-shadow(0 0 25px rgba(0, 255, 179, 0.6));
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+```
+
+---
+
+### קופסת ה-Glassmorphism - Hover:
+```css
+.waitlist-box {
+  transition: all 0.4s ease;
+}
+
+.waitlist-box:hover {
+  border-color: rgba(0, 255, 179, 0.2);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4),
+              0 0 0 1px rgba(0, 255, 179, 0.1);
+}
+```
+
+---
+
+## 6. אנימציות Mobile-Friendly
+
+### וודא שהאנימציות עובדות גם במובייל:
+```css
+/* הפחת אנימציות למי שמעדיף פחות תנועה */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+---
+
+## 7. סיכום - הסדר הזמנים של האנימציות
+```
+0.0s  → Logo appears (fadeInDown)
+0.2s  → "Something Amazing" appears (fadeInUp)
+0.4s  → "Is Coming Soon" appears (fadeInScale)
+0.6s  → "AI-Powered..." appears (fadeIn)
+0.8s  → Description text appears (fadeIn)
+1.0s  → Waitlist box appears (fadeInUp)
+```
+
+**סה"כ זמן לטעינה מלאה: 2.2 שניות**
+
+---
+
+## הוראה ל-Windsurf:
+
+"הוסף את כל האנימציות האלה לדף הכניסה (Coming Soon):
+1. אנימציות כניסה לכל האלמנטים בסדר (logo, title, subtitle, box)
+2. Hover effects על הכפתור והלוגו
+3. Focus state על תיבת האימייל
+4. Pulse עדין על הטקסט הירוק
+5. Ripple effect על הכפתור כשלוחצים
+6. Loading spinner + Success animation אחרי שליחה
+
+וודא שהכל חלק (smooth) ולא מוגזם."

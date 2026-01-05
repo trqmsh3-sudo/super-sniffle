@@ -1,0 +1,819 @@
+# 🚀 Complete Work Plan - TruthfulProducts
+
+## 📋 Overview
+
+A US-focused product research platform with two core tools:
+1. **Product Intelligence** - Deep research on specific products
+2. **Product Finder** - Find perfect products based on needs
+
+---
+
+## 🏗️ Technical Architecture
+
+```
+Frontend (React + Tailwind)
+    ↓
+Backend API (Node.js/Express)
+    ↓
+┌─────────────┬──────────────┬─────────────┐
+│ Web Scraper │  AI Engine   │   Cache     │
+│  Module     │  (Llama/API) │  (Redis)    │
+└─────────────┴──────────────┴─────────────┘
+    ↓           ↓              ↓
+Data Sources: Amazon, Reddit, YouTube, Walmart, Best Buy
+```
+
+---
+
+## 📁 Project Structure
+
+```
+truthful-products/
+│
+├── frontend/                    # React Application
+│   ├── public/
+│   │   ├── index.html
+│   │   └── favicon.ico
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── layout/
+│   │   │   │   ├── Header.jsx
+│   │   │   │   ├── Footer.jsx
+│   │   │   │   └── Navigation.jsx
+│   │   │   ├── productIntel/
+│   │   │   │   ├── SearchBox.jsx
+│   │   │   │   ├── AutoCorrectSuggestion.jsx
+│   │   │   │   ├── ResultsDisplay.jsx
+│   │   │   │   ├── ProsConsList.jsx
+│   │   │   │   ├── PricingSection.jsx
+│   │   │   │   ├── SentimentMeter.jsx
+│   │   │   │   └── SourceBreakdown.jsx
+│   │   │   ├── productFinder/
+│   │   │   │   ├── QuestionFlow.jsx
+│   │   │   │   ├── CategorySelector.jsx
+│   │   │   │   ├── BudgetSlider.jsx
+│   │   │   │   ├── PriorityRanker.jsx
+│   │   │   │   ├── RequirementsChecklist.jsx
+│   │   │   │   ├── RecommendationCard.jsx
+│   │   │   │   └── ComparisonTable.jsx
+│   │   │   └── common/
+│   │   │       ├── LoadingSpinner.jsx
+│   │   │       ├── ErrorMessage.jsx
+│   │   │       ├── Button.jsx
+│   │   │       └── Card.jsx
+│   │   ├── pages/
+│   │   │   ├── Home.jsx
+│   │   │   ├── ProductIntel.jsx
+│   │   │   ├── ProductFinder.jsx
+│   │   │   ├── About.jsx
+│   │   │   └── NotFound.jsx
+│   │   ├── hooks/
+│   │   │   ├── useProductSearch.js
+│   │   │   ├── useProductFinder.js
+│   │   │   ├── useDebounce.js
+│   │   │   └── useLocalStorage.js
+│   │   ├── services/
+│   │   │   └── api.js
+│   │   ├── utils/
+│   │   │   ├── formatters.js
+│   │   │   └── validators.js
+│   │   ├── App.jsx
+│   │   ├── index.js
+│   │   └── index.css
+│   ├── package.json
+│   ├── tailwind.config.js
+│   └── vite.config.js
+│
+├── backend/                     # API Server
+│   ├── src/
+│   │   ├── routes/
+│   │   │   ├── productIntel.routes.js
+│   │   │   ├── productFinder.routes.js
+│   │   │   └── health.routes.js
+│   │   ├── controllers/
+│   │   │   ├── productIntel.controller.js
+│   │   │   └── productFinder.controller.js
+│   │   ├── services/
+│   │   │   ├── scrapers/
+│   │   │   │   ├── base.scraper.js
+│   │   │   │   ├── amazon.scraper.js
+│   │   │   │   ├── reddit.scraper.js
+│   │   │   │   ├── youtube.scraper.js
+│   │   │   │   ├── walmart.scraper.js
+│   │   │   │   ├── bestbuy.scraper.js
+│   │   │   │   └── homedepot.scraper.js
+│   │   │   ├── ai/
+│   │   │   │   ├── claude.service.js        # For MVP
+│   │   │   │   ├── llama.service.js         # For production
+│   │   │   │   ├── sentiment.analyzer.js
+│   │   │   │   └── summarizer.js
+│   │   │   ├── cache.service.js
+│   │   │   ├── fuzzySearch.service.js
+│   │   │   ├── priceAnalysis.service.js
+│   │   │   └── aggregator.service.js
+│   │   ├── models/
+│   │   │   ├── Product.model.js
+│   │   │   ├── SearchHistory.model.js
+│   │   │   └── CachedResult.model.js
+│   │   ├── middleware/
+│   │   │   ├── auth.middleware.js
+│   │   │   ├── rateLimit.middleware.js
+│   │   │   ├── errorHandler.middleware.js
+│   │   │   └── validator.middleware.js
+│   │   ├── utils/
+│   │   │   ├── logger.js
+│   │   │   ├── textProcessing.js
+│   │   │   └── helpers.js
+│   │   ├── config/
+│   │   │   ├── database.js
+│   │   │   ├── redis.js
+│   │   │   └── constants.js
+│   │   └── server.js
+│   ├── tests/
+│   │   ├── unit/
+│   │   └── integration/
+│   ├── package.json
+│   ├── .env.example
+│   └── nodemon.json
+│
+├── ai-engine/                   # Python AI Service (Optional)
+│   ├── models/
+│   │   └── llama_loader.py
+│   ├── services/
+│   │   ├── sentiment_analyzer.py
+│   │   ├── summarizer.py
+│   │   └── recommendation_engine.py
+│   ├── api/
+│   │   └── main.py
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── shared/                      # Shared types/constants
+│   ├── types.ts
+│   └── constants.js
+│
+├── scripts/
+│   ├── setup.sh
+│   ├── seed-database.js
+│   ├── test-scrapers.js
+│   └── deploy.sh
+│
+├── docker/
+│   ├── docker-compose.yml
+│   ├── docker-compose.dev.yml
+│   ├── Dockerfile.frontend
+│   ├── Dockerfile.backend
+│   └── Dockerfile.ai
+│
+├── docs/
+│   ├── API.md
+│   ├── ARCHITECTURE.md
+│   ├── SCRAPERS.md
+│   ├── DEPLOYMENT.md
+│   └── CONTRIBUTING.md
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy.yml
+│
+├── .gitignore
+├── README.md
+├── LICENSE
+└── package.json
+```
+
+---
+
+## 🔧 Tech Stack
+
+### **Frontend:**
+```json
+{
+  "react": "^18.2.0",
+  "react-router-dom": "^6.20.0",
+  "axios": "^1.6.0",
+  "tailwindcss": "^3.4.0",
+  "recharts": "^2.10.0",
+  "framer-motion": "^10.16.0",
+  "react-hot-toast": "^2.4.1",
+  "zustand": "^4.4.0"
+}
+```
+
+### **Backend:**
+```json
+{
+  "express": "^4.18.0",
+  "redis": "^4.6.0",
+  "pg": "^8.11.0",
+  "puppeteer": "^21.6.0",
+  "cheerio": "^1.0.0-rc.12",
+  "axios": "^1.6.0",
+  "bull": "^4.12.0",
+  "dotenv": "^16.3.0",
+  "cors": "^2.8.5",
+  "helmet": "^7.1.0",
+  "express-rate-limit": "^7.1.0",
+  "winston": "^3.11.0"
+}
+```
+
+### **AI Engine:**
+```python
+# requirements.txt
+anthropic==0.8.0         # For MVP (Claude API)
+transformers==4.35.0     # For Llama
+torch==2.1.0
+sentence-transformers==2.2.2
+fastapi==0.104.0
+uvicorn==0.24.0
+pydantic==2.5.0
+redis==5.0.0
+```
+
+### **DevOps:**
+- Docker & Docker Compose
+- GitHub Actions (CI/CD)
+- Nginx (reverse proxy)
+- PM2 (process manager)
+
+---
+
+## 📊 Database Schema
+
+### **PostgreSQL Tables:**
+
+```sql
+-- products table (cache product data)
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    product_name VARCHAR(500) NOT NULL,
+    normalized_name VARCHAR(500) NOT NULL,
+    category VARCHAR(100),
+    data JSONB NOT NULL,
+    last_scraped TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- search_history table
+CREATE TABLE search_history (
+    id SERIAL PRIMARY KEY,
+    query VARCHAR(500) NOT NULL,
+    product_id INTEGER REFERENCES products(id),
+    user_ip VARCHAR(45),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- cached_results table
+CREATE TABLE cached_results (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER REFERENCES products(id),
+    result_data JSONB NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- user_preferences table (for Product Finder)
+CREATE TABLE user_preferences (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255),
+    category VARCHAR(100),
+    budget_min INTEGER,
+    budget_max INTEGER,
+    priorities JSONB,
+    requirements JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- recommendations table
+CREATE TABLE recommendations (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255),
+    product_ids INTEGER[],
+    match_scores FLOAT[],
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_products_normalized ON products(normalized_name);
+CREATE INDEX idx_search_history_query ON search_history(query);
+CREATE INDEX idx_cached_expires ON cached_results(expires_at);
+```
+
+### **Redis Cache Structure:**
+
+```
+# Product data cache (6 hours)
+product:intel:{product_name} -> JSON
+
+# Search suggestions cache (24 hours)
+suggestions:{partial_query} -> Array
+
+# Rate limiting
+ratelimit:{ip}:{endpoint} -> Counter
+
+# Active scraping jobs
+scraping:job:{product_name} -> Status
+```
+
+---
+
+## 🎯 API Endpoints
+
+### **Product Intelligence:**
+
+```
+POST   /api/v1/product-intel/search
+       Body: { "query": "Weber Spirit II E-310" }
+       Returns: Full product analysis
+
+GET    /api/v1/product-intel/suggestions
+       Query: ?q=web
+       Returns: Autocomplete suggestions
+
+GET    /api/v1/product-intel/:productId
+       Returns: Cached product data
+```
+
+### **Product Finder:**
+
+```
+POST   /api/v1/product-finder/start
+       Body: { "category": "grills" }
+       Returns: Session ID & first question
+
+POST   /api/v1/product-finder/answer
+       Body: { 
+         "sessionId": "xxx",
+         "question": "budget",
+         "answer": { "min": 300, "max": 600 }
+       }
+       Returns: Next question or recommendations
+
+GET    /api/v1/product-finder/recommendations/:sessionId
+       Returns: Top 3-5 product matches
+
+POST   /api/v1/product-finder/compare
+       Body: { "productIds": [1, 2, 3] }
+       Returns: Side-by-side comparison
+```
+
+### **Utility:**
+
+```
+GET    /api/v1/health
+       Returns: Service status
+
+GET    /api/v1/categories
+       Returns: Available product categories
+
+GET    /api/v1/stats
+       Returns: Platform statistics
+```
+
+---
+
+## 🔄 Data Flow
+
+### **Product Intelligence Flow:**
+
+```
+1. User enters: "Weber Spirit II E-310"
+   ↓
+2. Frontend → POST /api/v1/product-intel/search
+   ↓
+3. Backend checks Redis cache
+   ├─ Cache HIT → Return immediately
+   └─ Cache MISS → Continue
+   ↓
+4. Fuzzy search correction
+   "webber sprit" → "Weber Spirit II E-310"
+   ↓
+5. Parallel scraping (Promise.all):
+   ├─ Amazon API/Scraper
+   ├─ Reddit API
+   ├─ YouTube API
+   ├─ Walmart API
+   ├─ Best Buy API
+   └─ Home Depot Scraper
+   ↓
+6. Aggregate all data
+   ↓
+7. Send to AI Engine:
+   {
+     reviews: [...],
+     prices: [...],
+     sources: [...]
+   }
+   ↓
+8. AI analyzes and generates:
+   - Overall score
+   - Pros/cons
+   - Summary
+   - Price analysis
+   - Recommendation
+   ↓
+9. Save to PostgreSQL & Redis
+   ↓
+10. Return to frontend
+   ↓
+11. Display beautiful results!
+```
+
+### **Product Finder Flow:**
+
+```
+1. User clicks "Find My Perfect Product"
+   ↓
+2. Frontend → POST /api/v1/product-finder/start
+   Body: { category: "grills" }
+   ↓
+3. Backend creates session, returns first question
+   ↓
+4. User answers questions (budget, priorities, etc.)
+   ↓
+5. Each answer: POST /api/v1/product-finder/answer
+   ↓
+6. After all questions:
+   Backend searches database for matching products
+   ↓
+7. AI ranks products by fit score
+   ↓
+8. Return top 3-5 recommendations
+   ↓
+9. Display with "Why it matches" explanations
+```
+
+---
+
+## 🧪 Testing Strategy
+
+### **Unit Tests:**
+```javascript
+// backend/tests/unit/fuzzySearch.test.js
+test('corrects misspelled product names', () => {
+  expect(fuzzyCorrect('webber sprit')).toBe('Weber Spirit');
+});
+
+// backend/tests/unit/priceAnalysis.test.js
+test('calculates average price correctly', () => {
+  const prices = [499, 529, 549];
+  expect(getAveragePrice(prices)).toBe(526);
+});
+```
+
+### **Integration Tests:**
+```javascript
+// backend/tests/integration/productIntel.test.js
+test('full product search flow', async () => {
+  const response = await request(app)
+    .post('/api/v1/product-intel/search')
+    .send({ query: 'iPhone 15 Pro' });
+  
+  expect(response.status).toBe(200);
+  expect(response.body).toHaveProperty('score');
+  expect(response.body).toHaveProperty('pros');
+});
+```
+
+### **Scraper Tests:**
+```javascript
+// scripts/test-scrapers.js
+async function testAllScrapers() {
+  const testProduct = 'iPhone 15 Pro';
+  
+  console.log('Testing Amazon...');
+  const amazonData = await amazonScraper(testProduct);
+  assert(amazonData.reviews.length > 0);
+  
+  console.log('Testing Reddit...');
+  const redditData = await redditScraper(testProduct);
+  assert(redditData.posts.length > 0);
+  
+  // etc...
+}
+```
+
+---
+
+## 🚀 Deployment Strategy
+
+### **Phase 1: MVP (Week 1-2)**
+
+**Goal:** Get basic Product Intelligence working
+
+```bash
+# What to deploy:
+- Frontend (Vercel/Netlify)
+- Backend (DigitalOcean/Railway)
+- PostgreSQL (Managed DB)
+- Redis (Managed cache)
+
+# Features:
+✅ Product search with autocorrect
+✅ Amazon + Reddit scraping only
+✅ Claude API for analysis
+✅ Basic caching (6 hours)
+✅ Simple UI
+
+# Cost: ~$50/month
+```
+
+### **Phase 2: Full Launch (Week 3-4)**
+
+```bash
+# Add:
+✅ All scrapers (Walmart, Best Buy, YouTube, etc.)
+✅ Product Finder tool
+✅ Better caching strategy
+✅ Rate limiting
+✅ Analytics
+
+# Cost: ~$100-200/month
+```
+
+### **Phase 3: Scale (Month 2+)**
+
+```bash
+# Migrate to:
+✅ Self-hosted Llama (save $$$)
+✅ CDN for static assets
+✅ Load balancing
+✅ Database replicas
+✅ Monitoring (Sentry, DataDog)
+
+# Cost: ~$300-500/month (handles 100K+ users)
+```
+
+---
+
+## 📦 Environment Variables
+
+```bash
+# backend/.env.example
+
+# Server
+NODE_ENV=development
+PORT=5000
+API_VERSION=v1
+
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/truthful_products
+REDIS_URL=redis://localhost:6379
+
+# AI Services
+CLAUDE_API_KEY=sk-ant-xxx              # For MVP
+LLAMA_API_URL=http://localhost:8000    # For production
+
+# Scraping APIs
+AMAZON_API_KEY=xxx
+REDDIT_CLIENT_ID=xxx
+REDDIT_CLIENT_SECRET=xxx
+YOUTUBE_API_KEY=xxx
+WALMART_API_KEY=xxx
+BESTBUY_API_KEY=xxx
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000            # 15 minutes
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Caching
+CACHE_PRODUCT_TTL=21600                # 6 hours
+CACHE_SUGGESTIONS_TTL=86400            # 24 hours
+
+# Security
+JWT_SECRET=your-secret-key
+CORS_ORIGIN=https://yourfrontend.com
+
+# Monitoring
+SENTRY_DSN=xxx
+LOG_LEVEL=info
+```
+
+---
+
+## 🎨 UI Components Preview
+
+### **Home Page:**
+```jsx
+<HomePage>
+  <Hero>
+    <h1>Make Smarter Purchase Decisions</h1>
+    <p>Unbiased product research powered by real reviews</p>
+  </Hero>
+  
+  <ToolCards>
+    <ToolCard 
+      icon="🔍"
+      title="Research a Product"
+      description="Know exactly what you're buying"
+      link="/product-intel"
+    />
+    <ToolCard 
+      icon="✨"
+      title="Find My Perfect Product"
+      description="Answer questions, get smart recommendations"
+      link="/product-finder"
+    />
+  </ToolCards>
+  
+  <Features>
+    <Feature icon="✓" text="No sponsored results" />
+    <Feature icon="✓" text="Real reviews from real people" />
+    <Feature icon="✓" text="Price comparison across stores" />
+  </Features>
+</HomePage>
+```
+
+### **Product Intel Results:**
+```jsx
+<ProductIntelResults>
+  <ProductHeader>
+    <h2>{product.name}</h2>
+    <ScoreMeter score={8.7} />
+    <p>87% would recommend</p>
+  </ProductHeader>
+  
+  <ProsConsGrid>
+    <ProsSection items={pros} />
+    <ConsSection items={cons} />
+  </ProsConsGrid>
+  
+  <PricingSection>
+    <AveragePrice value={529} />
+    <PriceComparison stores={[...]} />
+    <PriceTrend data={[...]} />
+  </PricingSection>
+  
+  <SourceBreakdown sources={[
+    { name: 'Amazon', reviews: 2340, sentiment: 0.85 },
+    { name: 'Reddit', posts: 156, sentiment: 0.82 },
+    // ...
+  ]} />
+  
+  <Verdict>
+    {aiGeneratedVerdict}
+  </Verdict>
+  
+  <AffiliateCTA>
+    <Disclaimer>Links may earn commission</Disclaimer>
+    <StoreButtons stores={[...]} />
+  </AffiliateCTA>
+</ProductIntelResults>
+```
+
+---
+
+## ⚡ Performance Optimizations
+
+### **Caching Strategy:**
+```javascript
+// Three-tier caching:
+
+// 1. Memory cache (fastest, 5 min)
+const memCache = new Map();
+
+// 2. Redis cache (fast, 6 hours)
+await redis.setex(key, 21600, data);
+
+// 3. PostgreSQL (permanent)
+await Product.create({ ... });
+```
+
+### **Parallel Scraping:**
+```javascript
+// Scrape all sources simultaneously
+const [amazon, reddit, youtube, walmart] = await Promise.allSettled([
+  amazonScraper(product),
+  redditScraper(product),
+  youtubeScraper(product),
+  walmartScraper(product)
+]);
+
+// Continue even if one fails
+const validData = results
+  .filter(r => r.status === 'fulfilled')
+  .map(r => r.value);
+```
+
+### **Request Batching:**
+```javascript
+// Batch multiple AI requests
+const queue = [];
+setInterval(async () => {
+  if (queue.length > 0) {
+    const batch = queue.splice(0, 10);
+    await processAIBatch(batch);
+  }
+}, 1000);
+```
+
+---
+
+## 🔐 Security Measures
+
+```javascript
+// Rate limiting by IP
+app.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100
+}));
+
+// Input validation
+app.post('/search', validate({
+  query: Joi.string().max(200).required()
+}));
+
+// Sanitize user input
+const clean = sanitize(userInput);
+
+// Helmet for security headers
+app.use(helmet());
+
+// CORS
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
+```
+
+---
+
+## 📈 Monitoring & Analytics
+
+```javascript
+// Log important events
+logger.info('Product search', {
+  product: productName,
+  sources: sourcesScraped,
+  duration: timeTaken,
+  cacheHit: wasCached
+});
+
+// Track errors
+Sentry.captureException(error, {
+  tags: { feature: 'product-intel' }
+});
+
+// Business metrics
+analytics.track('search_completed', {
+  product_category: category,
+  user_country: 'US',
+  cache_hit: false
+});
+```
+
+---
+
+## 🎯 Next Steps for Windsurf
+
+### **Step 1: Initialize Project**
+```bash
+# Create main directory
+mkdir truthful-products && cd truthful-products
+
+# Initialize mono-repo
+npm init -y
+
+# Create frontend
+npm create vite@latest frontend -- --template react
+cd frontend && npm install
+
+# Create backend
+cd ../
+mkdir backend && cd backend
+npm init -y
+npm install express redis pg puppeteer cheerio axios bull dotenv cors helmet express-rate-limit winston
+
+# Install dev dependencies
+npm install -D nodemon jest supertest
+```
+
+### **Step 2: Start with MVP**
+
+**Priority Order:**
+1. ✅ Basic Express server with health endpoint
+2. ✅ React frontend with search box
+3. ✅ Amazon scraper (basic)
+4. ✅ Reddit scraper (basic)
+5. ✅ Claude API integration
+6. ✅ Simple results display
+7. ✅ Basic caching with Redis
+
+---
+
+## 🎬 Ready to Build?
+
+**I can help you build this step-by-step in Windsurf!**
+
+Would you like me to:
+
+**Option A:** Create the complete file structure with all initial code?
+
+**Option B:** Start with MVP Phase 1 (just Product Intel with Amazon + Reddit)?
+
+**Option C:** Focus on a specific component first (like the scrapers)?
+
+**Tell me which option and I'll generate all the code for Windsurf! 🚀**

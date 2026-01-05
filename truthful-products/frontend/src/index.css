@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import mobile optimizations */
+@import './styles/mobile.css';
+
+@layer base {
+  body {
+    @apply bg-bg-primary text-text-primary;
+  }
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(0, 255, 179, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(0, 255, 179, 0.6),
+                 0 0 30px rgba(0, 255, 179, 0.4);
+  }
+}
+
+@keyframes floatBlob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(50px, -30px) scale(1.1);
+  }
+  66% {
+    transform: translate(-30px, 50px) scale(0.9);
+  }
+}
+
+@keyframes successPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-bg-primary font-semibold py-3 px-8 rounded-lg transition-all duration-300 shadow-md hover:shadow-glow-primary hover:scale-105;
+  }
+  
+  .btn-secondary {
+    @apply bg-white/5 hover:bg-white/10 text-primary border-2 border-primary font-semibold py-3 px-6 rounded-lg transition-all duration-300 backdrop-blur-[10px];
+  }
+  
+  .card {
+    @apply bg-white/5 rounded-xl shadow-md p-6 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,255,179,0.2)] border border-white/10 backdrop-blur-[10px];
+  }
+  
+  .input-field {
+    @apply w-full px-5 py-4 border-2 border-white/10 rounded-xl focus:border-primary focus:outline-none transition-all duration-300 bg-white/5 text-text-primary placeholder-text-muted;
+  }
+}
+
+/* Custom animations for Trust Loader */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+.animate-scan {
+  animation: scan 2s ease-in-out infinite;
+}

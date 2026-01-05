@@ -1,0 +1,21 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" fill="#0A1628" rx="6"/>
+  
+  <!-- Shield Icon -->
+  <path 
+    d="M16 6 L10 8.5 L10 15 Q10 20 16 24 Q22 20 22 15 L22 8.5 Z"
+    fill="#FFFFFF"
+    stroke="#00FFB3"
+    stroke-width="1.5"
+  />
+  
+  <!-- Checkmark V -->
+  <path 
+    d="M13 15 L15 17 L19 12"
+    stroke="#00FFB3"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
