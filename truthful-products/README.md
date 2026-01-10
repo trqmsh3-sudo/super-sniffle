@@ -2,9 +2,13 @@
 
 **AI-Powered Product Intelligence Platform**
 
-Make smarter purchase decisions with comprehensive analysis powered by Google Gemini AI.
+Make smarter purchase decisions with comprehensive analysis powered by **Gemini + Claude AI** with **Smart Routing**.
 
 🌐 **Live Demo:** https://clearpick.netlify.app
+
+⚡ **New:** Smart AI Routing saves 70% on AI costs! Read `SMART_ROUTING_GUIDE.md`
+
+👥 **Collaboration:** Built by Cursor + Windsurf team
 
 ---
 

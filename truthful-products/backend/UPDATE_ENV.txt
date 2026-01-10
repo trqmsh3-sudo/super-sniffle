@@ -1,0 +1,27 @@
+========================================
+IMPORTANT: Update .env file!
+========================================
+
+PostgreSQL is installed and database is created!
+
+Now update .env file:
+
+Location:
+C:\Users\maisi\OneDrive\Documents\מערכת המלצות למוצרים חכמה\truthful-products\backend\.env
+
+Change this line:
+DB_PASSWORD=your_password_here
+
+To:
+DB_PASSWORD=postgres
+
+Then save the file.
+
+After that, run:
+npm run test-db
+
+You should see:
+✅ Database connected!
+✅ Found 4 tables
+
+========================================

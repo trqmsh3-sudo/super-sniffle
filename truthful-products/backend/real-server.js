@@ -7,11 +7,11 @@ const apiRoutes = require('./routes/api');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: true,
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
@@ -29,6 +29,7 @@ app.get('/', (req, res) => {
     service: 'ClearPick.ai API',
     version: '2.0.0',
     status: 'running',
+    environment: process.env.NODE_ENV || 'development',
     endpoints: {
       health: 'GET /api/health',
       search: 'GET /api/search?q=product',
@@ -38,8 +39,8 @@ app.get('/', (req, res) => {
     },
     features: {
       database: 'PostgreSQL',
-      queue: 'Bull Queue',
-      ai: 'Claude (coming soon)',
+      queue: 'Bull Queue (coming soon)',
+      ai: 'Claude API (coming soon)',
       data_sources: 'Reddit (coming soon)'
     }
   });
@@ -73,7 +74,7 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════╗
-║   🚀 ClearPick.ai Backend Server         ║
+║   🚀 ClearPick.ai Real Backend Server     ║
 ║   📡 Running on: http://localhost:${PORT}  ║
 ║   💾 Database: PostgreSQL                 ║
 ║   🤖 AI: Claude (coming soon)             ║

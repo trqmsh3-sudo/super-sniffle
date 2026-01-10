@@ -48,27 +48,29 @@ const Home = () => {
           <Logo size="large" lightMode={true} />
         </div>
 
-        <h1 className="text-5xl md:text-6xl font-bold text-text-primary mb-6 animate-[fadeInUp_1s_ease-out_0.2s_backwards]">
-          Something Amazing
+        <h1 className="text-6xl md:text-7xl font-black text-white mb-6 animate-slide-up leading-tight">
+          Stop Guessing.
           <br />
-          <span className="text-primary animate-[fadeInScale_1s_ease-out_0.4s_backwards] inline-block" style={{ animation: 'fadeInScale 1s ease-out 0.4s backwards, textPulse 3s ease-in-out 2s infinite' }}>Is Coming Soon</span>
+          <span className="bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 bg-clip-text text-transparent">
+            Start Knowing.
+          </span>
         </h1>
 
-        <p className="text-xl md:text-2xl text-text-secondary mb-4 animate-[fadeIn_1s_ease-out_0.6s_backwards]">
-          AI-Powered Product Intelligence
+        <p className="text-2xl md:text-3xl text-slate-300 mb-4 font-semibold animate-slide-up" style={{animationDelay: '0.1s'}}>
+          Truth-Powered Product Intelligence
         </p>
         
-        <p className="text-lg text-text-muted mb-12 max-w-xl mx-auto animate-[fadeIn_1s_ease-out_0.8s_backwards]">
-          We're building the most transparent product research platform. 
-          Get unbiased insights powered by AI, not by ads.
+        <p className="text-lg md:text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-slide-up" style={{animationDelay: '0.2s'}}>
+          We analyze <span className="text-primary-400 font-semibold">real reviews</span> from across the web.
+          No BS. No ads. Just honest insights in <span className="text-secondary-400 font-semibold">30 seconds</span>.
         </p>
 
         <div className="bg-white/5 backdrop-blur-[10px] rounded-2xl p-8 mb-12 border border-white/10 shadow-lg animate-[fadeInUp_1.2s_ease-out_1s_backwards] transition-all duration-400 hover:border-primary/20 hover:shadow-[0_12px_48px_rgba(0,0,0,0.4)]">
-          <h2 className="text-2xl font-semibold text-text-primary mb-4">
-            Be the First to Know
+          <h2 className="text-3xl font-bold text-white mb-3">
+            Get Early Access
           </h2>
-          <p className="text-text-secondary mb-6">
-            Join our exclusive waitlist for early access
+          <p className="text-slate-300 mb-6 text-lg">
+            Join <span className="text-primary-400 font-semibold">2,847 smart shoppers</span> on the waitlist
           </p>
 
           {!submitted ? (

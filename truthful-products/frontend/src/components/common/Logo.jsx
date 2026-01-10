@@ -54,7 +54,7 @@ const Logo = ({ size = 'default', variant = 'full', lightMode = false }) => {
       </div>
       <div className="flex items-baseline gap-1">
         <span 
-          className={`${currentSize.text} font-bold tracking-tight ${lightMode ? 'text-white' : 'text-white'}`}
+          className={`${currentSize.text} font-bold tracking-tight ${lightMode ? 'text-white' : 'text-navy'}`}
           style={{ letterSpacing: '-0.02em' }}
         >
           Clear
@@ -69,7 +69,7 @@ const Logo = ({ size = 'default', variant = 'full', lightMode = false }) => {
           Pick
         </span>
         <span 
-          className="text-base font-normal text-text-muted"
+          className={`text-base font-normal ${lightMode ? 'text-white/70' : 'text-navy-light'}`}
           style={{ fontSize: '0.9em' }}
         >
           .ai
