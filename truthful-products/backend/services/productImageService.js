@@ -64,31 +64,14 @@ class ProductImageService {
     if (!productName || !String(productName).trim()) return null;
     const name = String(productName).trim();
 
-    // 0) Apple OG image (no API key, usually very "official-looking")
+    // 0) Apple OG image (no API key, usually very "official-looking") - FIRST PRIORITY
     const appleOg = await this.tryAppleOgImage(name).catch(() => null);
-    if (appleOg) return appleOg;
-
-    // 1) Google Custom Search (best quality when configured)
-    try {
-      const lower = name.toLowerCase();
-      const isAppleProduct =
-        /\biphone\b|\bipad\b|\bmacbook\b|\bairpods\b|\bapple watch\b|\bimac\b|\bmac mini\b/.test(lower);
-
-      // Prefer official-ish sources for Apple products
-      const opts = isAppleProduct
-        ? {
-            preferredSites: ['apple.com', 'store.storeimages.cdn-apple.com'],
-            querySuffix: 'press image OR product image',
-          }
-        : undefined;
-
-      const url = await googleShoppingService.getProductImage(name, opts);
-      if (url) return url;
-    } catch {
-      // ignore, fall back
+    if (appleOg) {
+      console.log(`✅ Using Apple OG image (no API key needed)`);
+      return appleOg;
     }
 
-    // 2) Wikipedia REST summary (free fallback)
+    // 1) Wikipedia REST summary (free, no API key) - SECOND PRIORITY
     try {
       const resp = await axios.get(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`,
@@ -104,10 +87,24 @@ class ProductImageService {
       const data = resp?.data;
       const wikiImage =
         data?.originalimage?.source || data?.thumbnail?.source || null;
-      return typeof wikiImage === 'string' && wikiImage.startsWith('http')
-        ? wikiImage
-        : null;
+      if (typeof wikiImage === 'string' && wikiImage.startsWith('http')) {
+        console.log(`✅ Using Wikipedia image (free, no API key needed)`);
+        return wikiImage;
+      }
+    } catch (e) {
+      console.warn(`⚠️ Wikipedia image failed: ${e?.message || e}`);
+      // ignore, fall back
+    }
+
+    // 2) Google Custom Search (ONLY if API key is configured AND not rate limited)
+    // SKIP THIS if we've been rate limited (user will see no image rather than errors)
+    try {
+      // Skip Google Custom Search to avoid rate limiting
+      // The Apple OG + Wikipedia fallbacks should be sufficient
+      console.log(`⚠️ Skipping Google Custom Search to avoid rate limiting`);
+      return null;
     } catch {
+      // ignore
       return null;
     }
   }
