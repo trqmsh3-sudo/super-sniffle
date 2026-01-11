@@ -81,6 +81,54 @@ router.post('/ai-stats/reset', (req, res) => {
 });
 
 /**
+ * POST /api/admin/clear-dossiers
+ * מוחק את כל התיקים (dossiers) - מאפשר בנייה מחדש עם תמונות
+ */
+router.post('/clear-dossiers', async (req, res) => {
+  try {
+    const db = require('../config/database');
+    
+    // Get count before deletion
+    const countBefore = await db.query('SELECT COUNT(*)::int AS count FROM dossiers');
+    const totalDossiers = countBefore.rows[0].count;
+    
+    if (totalDossiers === 0) {
+      return res.json({
+        success: true,
+        message: 'No dossiers to delete',
+        deleted: 0
+      });
+    }
+    
+    // Delete all dossiers (products remain)
+    await db.query('DELETE FROM dossiers');
+    
+    // Verify deletion
+    const countAfter = await db.query('SELECT COUNT(*)::int AS count FROM dossiers');
+    const remaining = countAfter.rows[0].count;
+    
+    if (remaining === 0) {
+      res.json({
+        success: true,
+        message: `Successfully deleted ${totalDossiers} dossiers`,
+        deleted: totalDossiers,
+        note: 'Products still exist - you can rebuild dossiers with POST /api/products/build'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: `Failed to delete all dossiers - ${remaining} still exist`
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/admin/system-info
  * מידע על המערכת
  */
