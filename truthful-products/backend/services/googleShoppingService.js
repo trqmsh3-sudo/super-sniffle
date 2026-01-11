@@ -164,6 +164,78 @@ class GoogleShoppingService {
   }
 
   /**
+   * Get official product image
+   * מחפש תמונה רשמית של המוצר (מאתר המותג או Google Images)
+   */
+  async getProductImage(productName, opts = {}) {
+    try {
+      if (!this.apiKey || !this.cx) {
+        console.log('⚠️ Google Shopping API not configured - cannot fetch product image');
+        return null;
+      }
+
+      const preferredSites = Array.isArray(opts.preferredSites) ? opts.preferredSites : [];
+      const querySuffix = (opts.querySuffix && String(opts.querySuffix).trim())
+        ? String(opts.querySuffix).trim()
+        : 'official product image';
+
+      const siteClause =
+        preferredSites.length > 0
+          ? ` (${preferredSites.map((s) => `site:${s}`).join(' OR ')})`
+          : '';
+
+      const q = `${productName} ${querySuffix}${siteClause}`.trim();
+      console.log(`🖼️  Searching for product image: ${q}`);
+
+      // Search for product image (official product photo)
+      const response = await axios.get(this.baseUrl, {
+        params: {
+          key: this.apiKey,
+          cx: this.cx,
+          q,
+          searchType: 'image',
+          num: 5,
+          imgSize: 'xlarge',
+          imgType: 'photo',
+          safe: 'active',
+        },
+        timeout: 5000
+      });
+
+      if (!response.data.items || response.data.items.length === 0) {
+        console.log('⚠️ No product image found');
+        return null;
+      }
+
+      // Pick best match: prefer items whose contextLink matches preferredSites
+      const items = response.data.items;
+      const best =
+        preferredSites.length > 0
+          ? (items.find((it) => {
+              const ctx = it?.image?.contextLink || it?.image?.thumbnailLink || it?.link;
+              if (!ctx) return false;
+              try {
+                const host = new URL(ctx).hostname.replace(/^www\./, '');
+                return preferredSites.some((s) => host === s || host.endsWith(`.${s}`) || s.endsWith(host));
+              } catch {
+                return false;
+              }
+            }) || items[0])
+          : items[0];
+
+      const imageUrl = best?.link || null;
+      if (!imageUrl) return null;
+      
+      console.log(`✅ Found product image: ${imageUrl.substring(0, 80)}...`);
+      return imageUrl;
+
+    } catch (error) {
+      console.error('❌ Error fetching product image:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Get statistics
    */
   getStats() {

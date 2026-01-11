@@ -3,7 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const db = require('./config/database');
-const DossierBuilder = require('./services/dossierBuilder');
+// Use SIMPLE builder - no complications!
+const DossierBuilder = require('./services/simpleDossierBuilder');
+const productImageService = require('./services/productImageService');
 
 // Import Windsurf's middleware (converting from ES modules)
 const rateLimit = require('express-rate-limit');
@@ -19,10 +21,16 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 
 // CORS (Windsurf's config)
+// NOTE:
+// In production (Vercel + Render), relying on a single FRONTEND_URL is brittle.
+// We allow cross-origin requests broadly since this is a public API (no cookies).
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: true,
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+app.options('*', cors());
 
 // Body parsers
 app.use(express.json());
@@ -53,22 +61,99 @@ app.use((req, res, next) => {
 const builder = new DossierBuilder();
 
 // ============================================================================
+// DATABASE SCHEMA (auto-create for first-run deployments)
+// ============================================================================
+async function ensureSchema() {
+  // Minimal schema required for API routes to work.
+  // This keeps production deployments functional without manual psql steps.
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL,
+      category TEXT,
+      image_url TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  // Add image_url column if it doesn't exist (for existing databases)
+  await db.query(`
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS dossiers (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER UNIQUE REFERENCES products(id) ON DELETE CASCADE,
+      overall_score INTEGER,
+      quality_score INTEGER,
+      value_score INTEGER,
+      reliability_score INTEGER,
+      summary TEXT,
+      pros JSONB,
+      cons JSONB,
+      common_failures JSONB,
+      best_for JSONB,
+      not_recommended_for JSONB,
+      total_reviews INTEGER,
+      confidence_score DOUBLE PRECISION,
+      status TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      last_updated TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS reviews_summary (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER UNIQUE REFERENCES products(id) ON DELETE CASCADE,
+      sources_found INTEGER,
+      overall_sentiment TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+
+// Ensure critical columns exist on existing databases (non-destructive)
+async function ensureCriticalColumns() {
+  try {
+    // Add created_at to dossiers if missing (some old DBs were created without it)
+    await db.query(`
+      ALTER TABLE dossiers
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()
+    `);
+    console.log('✅ ensured dossiers.created_at column exists');
+  } catch (err) {
+    console.warn('⚠️  Unable to ensure dossiers.created_at column:', err?.message || err);
+  }
+}
+
+// Fire-and-forget schema init (do not crash app if DB not configured yet)
+ensureSchema()
+  .then(() => console.log('✅ Database schema ensured'))
+  .catch((err) => console.warn('⚠️  Database schema not ensured:', err?.message || err));
+
+// Fire-and-forget column fixups (safe ALTER TABLE)
+ensureCriticalColumns()
+  .catch((err) => console.warn('⚠️  Column fixups failed:', err?.message || err));
+
+// ============================================================================
 // ROOT ROUTES
 // ============================================================================
 
 app.get('/', (req, res) => {
   res.json({
     service: 'ClearPick.ai Unified API',
-    version: '3.0.0',
+    version: '3.1.0',
     status: 'running',
     features: {
-      smart_ai_routing: '✅ Active (70% cost savings)',
-      gemini_ai: process.env.GEMINI_API_KEY ? '✅ Connected' : '❌ Missing key',
-      claude_ai: process.env.CLAUDE_API_KEY ? '✅ Connected (Web Search)' : '⚠️ Optional',
+      gemini_ai: process.env.GEMINI_API_KEY ? '✅ Connected (Expert Analysis)' : '❌ Missing key',
+      expert_analysis: '✅ Patterns, Correlations, Time-based Issues',
+      product_images: '✅ Official Product Images',
       database: '✅ PostgreSQL',
-      scrapers: '✅ Reddit + Amazon (Windsurf)',
-      middleware: '✅ Rate Limit + Error Handler (Windsurf)',
-      logger: '⏳ Upgrading to Winston (Windsurf)'
+      middleware: '✅ Rate Limit + Error Handler',
     },
     endpoints: {
       health: 'GET /api/health',
@@ -94,7 +179,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/health', async (req, res) => {
   try {
-    // Test database connection
+    // Test database connection (fast fail). Even if DB is down, keep endpoint responsive.
     await db.query('SELECT NOW()');
     
     res.json({
@@ -104,22 +189,26 @@ app.get('/api/health', async (req, res) => {
       uptime: process.uptime(),
       services: {
         database: '✅ Connected',
-        gemini: process.env.GEMINI_API_KEY ? '✅ Ready' : '❌ No API Key',
-        claude: process.env.CLAUDE_API_KEY ? '✅ Ready' : '⚠️ Optional',
-        smart_routing: '✅ Active'
+        gemini: process.env.GEMINI_API_KEY ? '✅ Ready (Expert Analysis)' : '❌ No API Key',
+        expert_analysis: '✅ Active',
+        product_images: '✅ Active'
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      status: 'error',
+    // Don't hard-fail health just because DB is down; keep it useful for waking Render.
+    res.status(200).json({
+      success: true,
+      status: 'degraded',
       timestamp: new Date().toISOString(),
       services: {
-        database: '❌ ' + error.message
+        database: '❌ ' + (error?.message || 'Database unavailable')
       }
     });
   }
 });
+
+// Convenience alias (many people try /health)
+app.get('/health', (req, res) => res.redirect(302, '/api/health'));
 
 // ============================================================================
 // PRODUCT ROUTES
@@ -127,6 +216,42 @@ app.get('/api/health', async (req, res) => {
 
 // Apply rate limiting to API routes
 app.use('/api', apiLimiter);
+
+/**
+ * GET /api/stats
+ * Lightweight public stats for social proof (best-effort; returns zeros if DB unavailable)
+ */
+app.get('/api/stats', async (req, res) => {
+  try {
+    const products = await db.query('SELECT COUNT(*)::int AS count FROM products');
+    const dossiersReady = await db.query(
+      `SELECT COUNT(*)::int AS count
+       FROM dossiers
+       WHERE status = 'ready'`
+    );
+    const last = await db.query('SELECT MAX(last_updated) AS last_updated FROM dossiers');
+
+    res.json({
+      success: true,
+      data: {
+        products_analyzed: products.rows?.[0]?.count ?? 0,
+        dossiers_ready: dossiersReady.rows?.[0]?.count ?? 0,
+        last_updated: last.rows?.[0]?.last_updated ?? null,
+      },
+    });
+  } catch (error) {
+    res.status(200).json({
+      success: true,
+      data: {
+        products_analyzed: 0,
+        dossiers_ready: 0,
+        last_updated: null,
+      },
+      degraded: true,
+      error: error?.message || 'Database unavailable',
+    });
+  }
+});
 
 /**
  * GET /api/search
@@ -166,7 +291,7 @@ app.get('/api/search', async (req, res) => {
     console.error('Search error:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error?.message || 'Database unavailable'
     });
   }
 });
@@ -218,6 +343,18 @@ app.get('/api/products/:id', async (req, res) => {
       });
     }
 
+    // Backfill image_url for existing products (no need to rebuild the whole dossier)
+    if (!dossier?.product?.image_url) {
+      const img = await productImageService.getImageUrl(dossier?.product?.name).catch(() => null);
+      if (img) {
+        await db.query(
+          'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2',
+          [img, dossier.product.id]
+        );
+        dossier.product.image_url = img;
+      }
+    }
+
     res.json({
       success: true,
       data: dossier
@@ -248,35 +385,49 @@ app.post('/api/products/build', async (req, res) => {
       });
     }
 
-    // Check if product already exists
+    // Check if product already exists WITH a completed dossier
     const existing = await db.query(
-      'SELECT id FROM products WHERE name = $1',
+      `SELECT p.id, d.overall_score 
+       FROM products p 
+       LEFT JOIN dossiers d ON p.id = d.product_id 
+       WHERE p.name = $1`,
       [productName]
     );
 
-    if (existing.rows.length > 0) {
+    // If product exists AND has a dossier with scores, return it
+    if (existing.rows.length > 0 && existing.rows[0].overall_score !== null) {
       const productId = existing.rows[0].id;
       const dossier = await builder.getDossier(productId);
+
+      // Backfill image_url for existing products (so UI shows an image immediately)
+      if (dossier && !dossier?.product?.image_url) {
+        const img = await productImageService.getImageUrl(dossier?.product?.name || productName).catch(() => null);
+        if (img) {
+          await db.query(
+            'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2',
+            [img, productId]
+          );
+          dossier.product.image_url = img;
+        }
+      }
       
       return res.json({
         success: true,
-        message: 'Product already exists',
+        message: 'Product dossier already exists',
         productId,
         data: dossier
       });
     }
 
-    // Build new dossier with Smart AI Routing
-    console.log(`\n🚀 Building new dossier for: ${productName}`);
-    console.log(`   Using Smart AI Routing (Gemini + Claude)`);
+    // Build new dossier (or rebuild if product exists but no dossier)
+    const existingProductId = existing.rows.length > 0 ? existing.rows[0].id : null;
+    console.log(`\n🚀 Building dossier for: ${productName}${existingProductId ? ' (rebuilding)' : ' (new)'}`);
+    console.log(`   Using Smart AI Routing (Gemini only - cost savings mode)`);
     
     const result = await builder.buildDossier(productName, category || 'general');
 
     // Get the full dossier
     const dossier = await builder.getDossier(result.productId);
-
-    // Get AI stats
-    const aiStats = builder.getAIStats();
 
     res.json({
       success: true,
@@ -284,10 +435,9 @@ app.post('/api/products/build', async (req, res) => {
       productId: result.productId,
       data: dossier,
       ai_usage: {
-        gemini_calls: aiStats.calls.gemini,
-        claude_calls: aiStats.calls.claude,
-        cost: aiStats.costs.total,
-        savings: aiStats.costs.actual_savings
+        gemini_calls: 1,
+        cost: '$0.00',
+        mode: 'Expert Analysis'
       }
     });
 
@@ -297,6 +447,59 @@ app.post('/api/products/build', async (req, res) => {
       success: false,
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+/**
+ * POST /api/products/:id/rebuild
+ * Force rebuild dossier for existing product
+ */
+app.post('/api/products/:id/rebuild', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get product name
+    const product = await db.query('SELECT name, category FROM products WHERE id = $1', [id]);
+    
+    if (product.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
+    }
+    
+    const { name, category } = product.rows[0];
+    
+    console.log(`\n🔄 Force rebuilding dossier for: ${name} (ID: ${id})`);
+    
+    // Delete existing dossier
+    await db.query('DELETE FROM dossiers WHERE product_id = $1', [id]);
+    await db.query('DELETE FROM reviews_summary WHERE product_id = $1', [id]);
+    
+    // Build new dossier
+    const result = await builder.buildDossier(name, category || 'general');
+    
+    // Get the full dossier
+    const dossier = await builder.getDossier(result.productId);
+    
+    res.json({
+      success: true,
+      message: 'Dossier rebuilt successfully',
+      productId: result.productId,
+      data: dossier,
+      ai_usage: {
+        gemini_calls: 1,
+        cost: '$0.00',
+        mode: 'Expert Analysis'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Rebuild error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
@@ -345,7 +548,9 @@ app.use((err, req, res, next) => {
 // START SERVER
 // ============================================================================
 
-app.listen(PORT, () => {
+// Start server only if not in Vercel serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
@@ -360,12 +565,11 @@ app.listen(PORT, () => {
 ╚═══════════════════════════════════════════════════════════╝
 
 ✨ Features:
-   🧠 Smart AI Routing (70% cost savings)
-   🔍 Web Search (Claude)
-   🔄 Auto-fallback (Gemini → Claude)
+   🧠 Expert Analysis (Patterns, Correlations, Predictions)
+   🖼️  Product Images (Official Product Photos)
    📈 AI Statistics tracking
-   🛡️  Rate limiting (Windsurf)
-   🔒 Security headers (Windsurf)
+   🛡️  Rate limiting
+   🔒 Security headers
 
 🔗 Endpoints:
    GET  /                      → Server info
@@ -381,7 +585,8 @@ app.listen(PORT, () => {
    curl http://localhost:${PORT}/api/health
    curl http://localhost:${PORT}/api/admin/ai-stats
   `);
-});
+  });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
