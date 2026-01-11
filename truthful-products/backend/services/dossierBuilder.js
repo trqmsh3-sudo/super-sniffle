@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const SmartAIRouter = require('./aiRouter');
+const productImageService = require('./productImageService');
 
 /**
  * Dossier Builder - בונה תיקי מוצרים מלאים
@@ -24,22 +25,57 @@ class DossierBuilder {
     try {
       // 1. זיהוי וניקוי שם המוצר (Gemini - חינם!)
       console.log('\n🔍 Step 1/6: Identifying product...');
-      const productInfo = await this.router.route('identify_product', {
-        query: productName
-      });
-      console.log(`   ✓ Identified: ${productInfo.name} (${productInfo.category})`);
+      let productInfo;
+      try {
+        productInfo = await this.router.route('identify_product', {
+          query: productName
+        });
+        console.log(`   ✓ Identified: ${productInfo?.name || productName} (${productInfo?.category || category})`);
+      } catch (identifyError) {
+        console.warn(`   ⚠️ Product identification failed, using original name: ${identifyError.message}`);
+        productInfo = { name: productName, category: category };
+      }
 
-      // 2. איסוף נתונים מהאינטרנט (Claude - בתשלום, web search!)
-      console.log('\n📥 Step 2/6: Collecting product data with web search...');
-      const collectedData = await this.router.route('build_dossier', {
-        productName: productInfo.name || productName
-      });
+      // Use original name as fallback
+      const finalName = productInfo?.name || productName;
+      const finalCategory = productInfo?.category || category;
 
-      // 3. שמירת המוצר בDB
+      // 2. איסוף נתונים + תמונת מוצר (במקביל כדי לחסוך זמן)
+      console.log('\n📥 Step 2/6: Collecting product data (AI) + fetching image...');
+      let collectedData;
+      let imageUrl;
+      try {
+        const [aiResult, img] = await Promise.all([
+          this.router.route('build_dossier', { productName: finalName }),
+          productImageService.getImageUrl(finalName),
+        ]);
+        collectedData = aiResult;
+        imageUrl = img || null;
+        console.log(`   ✓ Data collected successfully`);
+        if (imageUrl) console.log(`   ✓ Image found`);
+      } catch (collectError) {
+        console.error(`   ❌ Data collection failed: ${collectError.message}`);
+        // Provide minimal fallback data
+        collectedData = {
+          name: finalName,
+          summary: `Analysis pending for ${finalName}`,
+          pros: ['Product exists in market'],
+          cons: ['No detailed analysis available yet'],
+          common_issues: [],
+          best_for: ['General users'],
+          not_for: [],
+          overall_sentiment: 'mixed',
+          value_rating: 'fair',
+          confidence: 30,
+          sources_estimated: 0
+        };
+        // Best-effort image even if AI failed
+        imageUrl = await productImageService.getImageUrl(finalName).catch(() => null);
+      }
+
+      // 3. שמירת המוצר בDB (כולל תמונה)
       console.log('\n💾 Step 3/6: Saving product to database...');
-      const finalName = productInfo.name || productName;
-      const finalCategory = productInfo.category || category;
-      const productId = await this.saveProduct(finalName, finalCategory);
+      const productId = await this.saveProduct(finalName, finalCategory, imageUrl);
 
       // 4. חישוב ציונים
       console.log('\n🧮 Step 4/6: Calculating scores...');
@@ -66,7 +102,8 @@ class DossierBuilder {
         productName,
         scores,
         confidence: collectedData.confidence,
-        summary: collectedData.summary
+        summary: collectedData.summary,
+        imageUrl: imageUrl || null
       };
 
     } catch (error) {
@@ -78,25 +115,37 @@ class DossierBuilder {
   /**
    * שמירת מוצר בDB
    */
-  async saveProduct(name, category) {
+  async saveProduct(name, category, imageUrl = null) {
     // Check if product exists first
     const existing = await db.query(
-      'SELECT id FROM products WHERE name = $1',
+      'SELECT id, image_url FROM products WHERE name = $1',
       [name]
     );
 
     if (existing.rows.length > 0) {
       const productId = existing.rows[0].id;
+      // Update category and image if missing
+      const currentImage = existing.rows[0].image_url;
+      if ((category && category !== 'general') || (imageUrl && !currentImage)) {
+        await db.query(
+          `UPDATE products
+           SET category = COALESCE($1, category),
+               image_url = COALESCE($2, image_url),
+               updated_at = NOW()
+           WHERE id = $3`,
+          [category || null, imageUrl || null, productId]
+        );
+      }
       console.log(`   ✓ Product already exists with ID: ${productId}`);
       return productId;
     }
 
     // Create new product
     const result = await db.query(
-      `INSERT INTO products (name, category, created_at, updated_at) 
-       VALUES ($1, $2, NOW(), NOW()) 
+      `INSERT INTO products (name, category, image_url, created_at, updated_at) 
+       VALUES ($1, $2, $3, NOW(), NOW()) 
        RETURNING id`,
-      [name, category]
+      [name, category, imageUrl]
     );
 
     const productId = result.rows[0].id;
@@ -296,7 +345,8 @@ class DossierBuilder {
       product: {
         id: row.id,
         name: row.name,
-        category: row.category
+        category: row.category,
+        image_url: row.image_url || null
       },
       scores: {
         overall: row.overall_score,
