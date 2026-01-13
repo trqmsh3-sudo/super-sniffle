@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react';
 
-const API_URL = 'http://localhost:3000/api';
+// Smart API URL detection
+const getAPIUrl = () => {
+  // Auto-detect based on hostname
+  const hostname = window.location.hostname;
+  if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com') {
+    return 'https://clearpick-ai.onrender.com/api';
+  }
+  if (hostname.includes('vercel.app')) {
+    return 'https://clearpick-ai.onrender.com/api';
+  }
+  
+  // Default to localhost for development
+  return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+};
+
+const API_URL = getAPIUrl();
 
 // Hook לחיבור עם Backend API
 export const useProductDossier = (productId) => {

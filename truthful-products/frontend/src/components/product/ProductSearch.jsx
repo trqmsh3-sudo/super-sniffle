@@ -1,7 +1,27 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = 'http://localhost:3000/api';
+// Smart API URL detection
+const getAPIUrl = () => {
+  // If explicitly set in env, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Auto-detect based on hostname
+  const hostname = window.location.hostname;
+  if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com') {
+    return 'https://clearpick-ai.onrender.com/api';
+  }
+  if (hostname.includes('vercel.app')) {
+    return 'https://clearpick-ai.onrender.com/api';
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:3000/api';
+};
+
+const API_URL = getAPIUrl();
 
 const ProductSearch = () => {
   const [query, setQuery] = useState('');

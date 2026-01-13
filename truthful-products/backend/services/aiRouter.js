@@ -23,14 +23,19 @@ class SmartAIRouter {
       console.warn('⚠️  No GEMINI_API_KEY - Gemini features disabled');
     }
     
-    // Claude - בתשלום, עם web search
-    if (process.env.CLAUDE_API_KEY) {
+    // Claude - בתשלום, עם web search (מנוטרל זמנית עד ההשקה)
+    // תמיכה בשני השמות: CLAUDE_API_KEY או ANTHROPIC_API_KEY
+    const claudeApiKey = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
+    if (this.forceGeminiOnly) {
+      this.claude = null;
+      console.log('⏸️  Claude disabled (forceGeminiOnly=true) - using Gemini only');
+    } else if (claudeApiKey) {
       this.claude = new Anthropic({
-        apiKey: process.env.CLAUDE_API_KEY
+        apiKey: claudeApiKey
       });
       console.log('✅ Claude initialized (PAID)');
     } else {
-      console.warn('⚠️  No CLAUDE_API_KEY - Claude features disabled');
+      console.warn('⚠️  No CLAUDE_API_KEY or ANTHROPIC_API_KEY - Claude features disabled');
     }
     
     // סטטיסטיקות
@@ -47,11 +52,22 @@ class SmartAIRouter {
   // ============================================================================
   // ROUTING LOGIC - מי עושה מה?
   // ============================================================================
+  
+  // 🔧 TEMPORARY: Force Gemini only (save tokens)
+  get forceGeminiOnly() {
+    return true; // Change to false to restore Claude
+  }
 
   /**
    * נתב משימה ל-AI המתאים
    */
   async route(task, data) {
+    // 🔧 TEMPORARY: Force Gemini only
+    if (this.forceGeminiOnly && this.geminiModel) {
+      console.log(`🟡 [TEMP MODE] Routing "${task}" to Gemini ONLY (saving tokens)`);
+      return await this.useGemini(task, data);
+    }
+    
     const complexity = this.assessComplexity(task, data);
     
     if (complexity === 'simple' && this.geminiModel) {
@@ -94,16 +110,24 @@ class SmartAIRouter {
     
     try {
       const prompt = this.buildGeminiPrompt(task, data);
+      console.log(`   📝 Gemini prompt for "${task}": ${prompt.substring(0, 100)}...`);
+      
       const result = await this.geminiModel.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
       
+      console.log(`   📥 Gemini raw response: ${text.substring(0, 200)}...`);
       console.log(`   ✓ Gemini completed (saved $0.02)`);
-      return this.parseResponse(text);
+      
+      const parsed = this.parseResponse(text);
+      console.log(`   📊 Parsed result keys: ${Object.keys(parsed).join(', ')}`);
+      
+      return parsed;
 
     } catch (error) {
       this.stats.gemini_errors++;
       console.error('   ✗ Gemini error:', error.message);
+      console.error('   ✗ Full error:', error);
       
       // Fallback to Claude if available
       if (this.claude) {
@@ -223,6 +247,39 @@ Return ONLY valid JSON:
   "subcategory": "specific subcategory",
   "confidence": 0-100
 }
+`,
+
+      build_dossier: `
+You are a product research expert. Analyze the product "${data.productName}" and create a comprehensive product dossier.
+
+Based on your knowledge about this product, provide:
+
+1. A brief summary (2-3 sentences)
+2. List of pros (advantages)
+3. List of cons (disadvantages)  
+4. Common issues or failures reported by users
+5. Who this product is best for
+6. Who should NOT buy this product
+7. Overall sentiment (positive/negative/mixed)
+8. Value for money rating (excellent/good/fair/poor)
+9. Estimated confidence in your analysis (0-100)
+
+Return ONLY valid JSON in this exact format:
+{
+  "name": "${data.productName}",
+  "summary": "Brief 2-3 sentence summary of the product",
+  "pros": ["pro1", "pro2", "pro3"],
+  "cons": ["con1", "con2"],
+  "common_issues": ["issue1", "issue2"],
+  "best_for": ["user type 1", "user type 2"],
+  "not_for": ["user type who should avoid"],
+  "overall_sentiment": "positive|negative|mixed",
+  "value_rating": "excellent|good|fair|poor",
+  "confidence": 85,
+  "sources_estimated": 50
+}
+
+Be objective and balanced. Include both strengths and weaknesses.
 `
     };
 

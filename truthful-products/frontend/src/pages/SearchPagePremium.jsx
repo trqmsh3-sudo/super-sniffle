@@ -1,46 +1,144 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Sparkles, TrendingUp, Shield, Zap } from 'lucide-react';
+import { Badge, Button, Card, Input, Skeleton } from '../components/ui';
 
-const API_URL = 'http://localhost:3000/api';
+// Smart API URL detection
+const getAPIUrl = () => {
+  // If explicitly set in env, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Auto-detect based on hostname
+  const hostname = window.location.hostname;
+  if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com') {
+    return 'https://clearpick-ai.onrender.com/api';
+  }
+  if (hostname.includes('vercel.app')) {
+    return 'https://clearpick-ai.onrender.com/api';
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:5000/api';
+};
+
+const API_URL = getAPIUrl();
 
 const SearchPagePremium = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [didYouMean, setDidYouMean] = useState(null);
   const [loading, setLoading] = useState(false);
   const [building, setBuilding] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState(null);
+  const [backendStatus, setBackendStatus] = useState('idle'); // idle | waking | ready | degraded
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const wakeBackend = async () => {
+    setBackendStatus((s) => (s === 'ready' ? s : 'waking'));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      const resp = await fetch(`${API_URL.replace('/api', '')}/api/health`, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      const data = await resp.json().catch(() => null);
+      setBackendStatus(data?.status === 'ok' ? 'ready' : 'degraded');
+      return true;
+    } catch {
+      // Render free tier may be sleeping; keep UI in "waking"
+      setBackendStatus('waking');
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  useEffect(() => {
+    // Wake Render (free tier can sleep; first request may take ~30s).
+    wakeBackend();
+  }, []);
+
+  useEffect(() => {
+    // Allow deep-link: /search?q=...
+    const q = new URLSearchParams(location.search).get('q');
+    if (q && typeof q === 'string' && q.trim()) {
+      setQuery(q);
+      setError(null);
+      // Auto-search once - pass q directly to avoid race condition
+      handleSearch(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
+  const handleSearch = async (searchQuery = null) => {
+    // Use provided query or fallback to state
+    const queryToSearch = searchQuery || query;
+    
+    // Ensure queryToSearch is a string before calling trim
+    if (!queryToSearch || typeof queryToSearch !== 'string' || !queryToSearch.trim()) {
+      setError('Please enter a product name to search');
+      return;
+    }
     
     setLoading(true);
     setShowResults(true);
     setError(null);
+    setSuggestions([]);
+    setDidYouMean(null);
     
     try {
-      const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      if (backendStatus !== 'ready') {
+        await wakeBackend();
+      }
       
+      const url = `${API_URL}/search?q=${encodeURIComponent(queryToSearch)}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+
       if (data.success) {
         setResults(data.products || []);
+        setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+        setDidYouMean(typeof data.didYouMean === 'string' ? data.didYouMean : null);
       } else {
         setError(data.error || 'Search failed');
         setResults([]);
       }
     } catch (err) {
-      console.error('Search error:', err);
-      setError('Unable to connect to server');
-      setResults([]);
+      // Retry once after a short delay (common on cold start)
+      try {
+        setBackendStatus('waking');
+        await new Promise((r) => setTimeout(r, 8000));
+        await wakeBackend();
+        const retryResp = await fetch(`${API_URL}/search?q=${encodeURIComponent(queryToSearch)}`);
+        const retryData = await retryResp.json();
+        if (retryData.success) {
+          setResults(retryData.products || []);
+          setSuggestions(Array.isArray(retryData.suggestions) ? retryData.suggestions : []);
+          setDidYouMean(typeof retryData.didYouMean === 'string' ? retryData.didYouMean : null);
+          setError(null);
+        } else {
+          setError(retryData.error || 'Search failed');
+          setResults([]);
+        }
+      } catch {
+        setError('Unable to connect to server');
+        setResults([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleBuildNew = async () => {
-    if (!query.trim()) return;
+    if (!query || typeof query !== 'string' || !query.trim()) return;
     
     setBuilding(true);
     setError(null);
@@ -60,7 +158,13 @@ const SearchPagePremium = () => {
       if (data.success) {
         navigate(`/product/${data.productId}`);
       } else {
-        setError(data.error || 'Failed to build dossier');
+        if (data.code === 'NEEDS_DISAMBIGUATION') {
+          setError(data.reason || 'Please specify a product model.');
+          setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+          setResults([]);
+        } else {
+          setError(data.error || 'Failed to build dossier');
+        }
       }
     } catch (err) {
       console.error('Build error:', err);
@@ -70,300 +174,263 @@ const SearchPagePremium = () => {
     }
   };
 
+  const exampleQueries = useMemo(() => (['iPhone 15', 'AirPods Pro 2', 'Dyson V15', 'Sony WH-1000XM5']), []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950">
-      {/* Animated background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-secondary-500/20 rounded-full blur-3xl animate-float-delayed"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl animate-glow-pulse"></div>
-      </div>
+    <div className="min-h-screen bg-surface relative overflow-hidden">
+      {/* Soft background */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white via-mint-50 to-white" />
+      <div className="absolute -z-10 -top-40 -left-24 h-[28rem] w-[28rem] rounded-full bg-mint-200/35 blur-3xl" />
+      <div className="absolute -z-10 -bottom-40 -right-24 h-[30rem] w-[30rem] rounded-full bg-cyan-200/30 blur-3xl" />
 
-      {/* Content */}
-      <div className="relative z-10">
+      <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
         {!showResults ? (
-          /* HERO SEARCH */
-          <div className="min-h-screen flex items-center justify-center px-4 py-20">
-            <div className="max-w-5xl w-full">
-              {/* Badge */}
-              <div className="flex justify-center mb-8 animate-slide-up">
-                <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/5 backdrop-blur-xl rounded-full border border-white/10">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-slate-300 font-medium">
-                    <span className="text-primary-400 font-bold">12,847</span> smart shoppers trust us
-                  </span>
+          <div className="text-center">
+            <div className="flex justify-center mb-5">
+              <Badge variant="mint">Live web reviews • confidence scoring</Badge>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-black tracking-tight text-ink">
+              Find Products
+              <br />
+              <span className="bg-gradient-to-r from-mint-700 to-cyan-600 bg-clip-text text-transparent">
+                You Can Trust
+              </span>
+            </h1>
+            <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
+              Search any product and get a clean, honest dossier from real reviews: scores, pros/cons, and common failures.
+            </p>
+
+            <div className="mt-10 max-w-3xl mx-auto">
+              <Card className="p-4 md:p-5">
+                <div className="flex flex-col md:flex-row gap-3 items-stretch">
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search any product… (e.g., iPhone 15 Pro, Sony headphones)"
+                    leftIcon={<Search className="h-5 w-5" />}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    error={error}
+                  />
+                  <Button
+                    className="md:w-48"
+                    size="lg"
+                    loading={loading}
+                    leftIcon={<Sparkles className="h-5 w-5" />}
+                    onClick={handleSearch}
+                  >
+                    Analyze
+                  </Button>
                 </div>
-              </div>
 
-              {/* Main Headline */}
-              <h1 className="text-center text-6xl md:text-7xl lg:text-8xl font-black text-white mb-8 leading-none animate-slide-up" style={{animationDelay: '0.1s'}}>
-                Find Products
-                <br />
-                <span className="bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 bg-clip-text text-transparent">
-                  You Can Trust
-                </span>
-              </h1>
+                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  <span className="text-sm text-slate-500 mr-2">Try:</span>
+                  {exampleQueries.map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => {
+                        setQuery(q);
+                        setError(null);
+                        handleSearch(q);
+                      }}
+                      className="text-sm font-semibold text-mint-800 bg-mint-50 border border-mint-100 rounded-full px-3 py-1 hover:bg-mint-100 transition-colors"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </Card>
 
-              {/* Sub-headline */}
-              <p className="text-center text-xl md:text-2xl text-slate-400 mb-16 max-w-3xl mx-auto leading-relaxed animate-slide-up" style={{animationDelay: '0.2s'}}>
-                AI analyzes <span className="text-white font-semibold">thousands of real reviews</span> in seconds.
-                <br className="hidden md:block" />
-                No ads. No BS. Just honest insights.
-              </p>
+              {(backendStatus === 'waking' || backendStatus === 'degraded') && (
+                <p className="mt-4 text-sm text-slate-500">
+                  {backendStatus === 'waking'
+                    ? 'Waking the server… first request can take ~30s on free hosting.'
+                    : 'Server is up, but database may be unavailable (degraded mode).'}
+                </p>
+              )}
 
-              {/* Search Box - PREMIUM */}
-              <div className="max-w-4xl mx-auto mb-16 animate-slide-up" style={{animationDelay: '0.3s'}}>
-                {/* Glow effect */}
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary-500/30 via-secondary-500/30 to-accent-500/30 blur-2xl -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  
-                  <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-3 border border-white/10 shadow-premium group hover:border-primary-500/50 transition-all duration-300">
-                    <div className="flex flex-col md:flex-row gap-3">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
-                        <input
-                          type="text"
-                          value={query}
-                          onChange={(e) => setQuery(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                          placeholder="Search any product... (e.g., iPhone 15 Pro, Sony headphones)"
-                          className="w-full pl-14 pr-6 py-5 text-lg bg-transparent text-white placeholder:text-slate-500 focus:outline-none"
-                        />
-                      </div>
-                      <button
-                        onClick={handleSearch}
-                        disabled={loading || !query.trim()}
-                        className="relative overflow-hidden bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-500 hover:to-secondary-500 text-white font-bold px-10 py-5 rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl hover:shadow-primary-500/50 hover:-translate-y-0.5 active:translate-y-0 group"
-                      >
-                        <span className="relative z-10 flex items-center gap-2">
-                          {loading ? (
-                            <>
-                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                              Analyzing...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                              Analyze
-                            </>
-                          )}
-                        </span>
-                        {/* Shimmer effect */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
-                      </button>
+              <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                <Card className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-mint-100 border border-mint-200 flex items-center justify-center">
+                      <Shield className="h-5 w-5 text-mint-700" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-ink">Unbiased</div>
+                      <div className="text-sm text-slate-600">Pros & cons, always.</div>
                     </div>
                   </div>
-                </div>
+                </Card>
+                <Card className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-cyan-100 border border-cyan-200 flex items-center justify-center">
+                      <Zap className="h-5 w-5 text-cyan-700" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-ink">Fast</div>
+                      <div className="text-sm text-slate-600">Smooth loading states.</div>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-amber-700" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-ink">Clear scores</div>
+                      <div className="text-sm text-slate-600">Confidence included.</div>
+                    </div>
+                  </div>
+                </Card>
               </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap justify-center gap-8 text-slate-400 text-sm animate-slide-up" style={{animationDelay: '0.4s'}}>
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-green-400" />
-                  <span>100% Unbiased</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-yellow-400" />
-                  <span>Results in 30s</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-400" />
-                  <span>92% Accuracy</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>No Credit Card</span>
-                </div>
-              </div>
-
-              {error && (
-                <div className="mt-8 max-w-2xl mx-auto p-4 bg-red-500/10 border border-red-500/30 rounded-2xl animate-scale-in">
-                  <p className="text-red-400 text-center">{error}</p>
-                </div>
-              )}
             </div>
           </div>
         ) : (
-          /* RESULTS VIEW */
-          <div className="min-h-screen">
-            {/* Header */}
-            <div className="sticky top-0 z-50 bg-dark-900/80 backdrop-blur-xl border-b border-white/10">
-              <div className="container mx-auto px-4 py-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <button
-                      onClick={() => setShowResults(false)}
-                      className="text-slate-400 hover:text-white mb-2 flex items-center gap-2 transition-colors"
-                    >
-                      ← Back to search
-                    </button>
-                    <h2 className="text-3xl font-bold text-white">
-                      Results for "<span className="text-primary-400">{query}</span>"
-                    </h2>
-                    <p className="text-slate-400 mt-1">
-                      {results.length} {results.length === 1 ? 'product' : 'products'} found
-                    </p>
-                  </div>
-                </div>
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <button
+                  onClick={() => setShowResults(false)}
+                  className="text-sm font-semibold text-slate-600 hover:text-mint-700"
+                >
+                  ← Back to search
+                </button>
+                <h2 className="mt-2 text-3xl font-black text-ink">Results</h2>
+                <p className="text-slate-600">for <span className="font-semibold text-ink">{query}</span></p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setShowResults(false)}>New search</Button>
+                <Button
+                  loading={building}
+                  onClick={handleBuildNew}
+                  leftIcon={<Sparkles className="h-5 w-5" />}
+                  disabled={building || (suggestions.length > 0)}
+                  title={suggestions.length > 0 ? 'Pick a model first' : undefined}
+                >
+                  Build intelligence report
+                </Button>
               </div>
             </div>
 
-            {/* Results */}
-            <div className="container mx-auto px-4 py-12">
+            {(didYouMean || suggestions.length > 0) && (
+              <Card className="mt-6 p-6">
+                <div className="font-black text-ink">Refine your query</div>
+                {didYouMean ? (
+                  <div className="mt-1 text-slate-600">
+                    Did you mean{' '}
+                    <button
+                      className="font-semibold text-mint-800 underline underline-offset-4"
+                      onClick={() => navigate(`/search?q=${encodeURIComponent(didYouMean)}`)}
+                      type="button"
+                    >
+                      {didYouMean}
+                    </button>
+                    ?
+                  </div>
+                ) : null}
+
+                {suggestions.length > 0 ? (
+                  <>
+                    <div className="mt-2 text-slate-600">
+                      “{query}” is too broad. Pick an exact model to get accurate results:
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {suggestions.slice(0, 8).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => navigate(`/search?q=${encodeURIComponent(s)}`)}
+                          className="text-sm font-semibold text-mint-800 bg-mint-50 border border-mint-100 rounded-full px-3 py-1 hover:bg-mint-100 transition-colors"
+                          type="button"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </Card>
+            )}
+
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {loading ? (
-                /* Loading Skeletons */
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-dark-800 rounded-3xl p-8 border border-white/10 animate-pulse">
-                      <div className="h-8 bg-white/5 rounded-lg w-3/4 mb-4"></div>
-                      <div className="h-4 bg-white/5 rounded w-1/2 mb-6"></div>
-                      <div className="space-y-3">
-                        <div className="h-3 bg-white/5 rounded"></div>
-                        <div className="h-3 bg-white/5 rounded w-5/6"></div>
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="p-5">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="mt-3 h-4 w-1/2" />
+                    <Skeleton className="mt-6 h-24 w-full" />
+                  </Card>
+                ))
+              ) : results.length ? (
+                results.map((p) => (
+                  <Card key={p.id} className="p-5 cursor-pointer" onClick={() => navigate(`/product/${p.id}`)}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-black text-ink">{p.name}</div>
+                        <div className="mt-1">
+                          <Badge variant="neutral">{p.category || 'general'}</Badge>
+                        </div>
+                      </div>
+                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-mint-600 to-cyan-500 text-white flex items-center justify-center font-black shadow-mint-soft">
+                        {p.overall_score ?? '—'}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : results.length === 0 ? (
-                /* No Results - Build New */
-                <div className="max-w-2xl mx-auto text-center py-20">
-                  <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-primary-500/20 to-secondary-500/20 flex items-center justify-center backdrop-blur-xl border border-white/10">
-                    <Search className="w-16 h-16 text-primary-400" />
-                  </div>
-                  
-                  <h3 className="text-4xl font-bold text-white mb-4">
-                    No Dossier Yet
-                  </h3>
-                  
-                  <p className="text-xl text-slate-400 mb-8 max-w-md mx-auto">
-                    We haven't analyzed this product yet.
-                    <br />
-                    Want us to build a dossier?
-                  </p>
-                  
-                  <button
-                    onClick={handleBuildNew}
-                    disabled={building}
-                    className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-500 hover:to-secondary-500 text-white text-lg font-bold px-12 py-6 rounded-2xl transition-all duration-300 disabled:opacity-50 shadow-2xl hover:shadow-primary-500/50 hover:-translate-y-1 active:translate-y-0"
-                  >
-                    {building ? (
-                      <>
-                        <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Building Your Dossier...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                        <span>Build Intelligence Report</span>
-                        <span className="text-sm opacity-80">(30-60s)</span>
-                      </>
-                    )}
-                  </button>
-
-                  <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-                    <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                      <div className="text-2xl mb-2">🌐</div>
-                      <div className="text-sm text-slate-300">Searches web sources</div>
-                    </div>
-                    <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                      <div className="text-2xl mb-2">🧠</div>
-                      <div className="text-sm text-slate-300">AI analyzes reviews</div>
-                    </div>
-                    <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-                      <div className="text-2xl mb-2">📊</div>
-                      <div className="text-sm text-slate-300">Generates scores</div>
-                    </div>
+                    <div className="mt-4 text-sm text-slate-600 line-clamp-3">{p.summary || 'No summary yet.'}</div>
+                    <div className="mt-4 text-sm font-semibold text-mint-800">View dossier →</div>
+                  </Card>
+                ))
+              ) : (
+                <Card className="p-8 col-span-full text-center">
+                  <div className="text-2xl font-black text-ink mb-2">
+                    {suggestions.length ? 'Be more specific' : 'No products found'}
                   </div>
 
-                  {error && (
-                    <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                      <p className="text-red-400">{error}</p>
+                  {didYouMean ? (
+                    <div className="text-slate-600">
+                      Did you mean{' '}
+                      <button
+                        className="font-semibold text-mint-800 underline underline-offset-4"
+                        onClick={() => navigate(`/search?q=${encodeURIComponent(didYouMean)}`)}
+                        type="button"
+                      >
+                        {didYouMean}
+                      </button>
+                      ?
+                    </div>
+                  ) : (
+                    <div className="text-slate-600">
+                      {suggestions.length
+                        ? 'We found multiple possible models. Pick one to get accurate results:'
+                        : 'Want us to build a dossier from web reviews?'}
                     </div>
                   )}
-                </div>
-              ) : (
-                /* Results Grid - PREMIUM */
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
-                  {results.map((product, index) => (
-                    <div
-                      key={product.id}
-                      onClick={() => navigate(`/product/${product.id}`)}
-                      className="group relative bg-gradient-to-br from-dark-800 to-dark-900 rounded-3xl p-8 border border-white/10 hover:border-primary-500/50 cursor-pointer transition-all duration-500 hover:shadow-2xl hover:shadow-primary-500/20 hover:-translate-y-2 animate-slide-up"
-                      style={{animationDelay: `${index * 0.1}s`}}
-                    >
-                      {/* Score Badge - TOP RIGHT */}
-                      {product.overall_score && (
-                        <div className="absolute top-6 right-6 w-24 h-24">
-                          <div className="relative w-full h-full">
-                            {/* Glow ring */}
-                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 opacity-20 blur-md group-hover:opacity-40 transition-opacity"></div>
-                            {/* Score circle */}
-                            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-primary-600 to-secondary-600 p-0.5">
-                              <div className="w-full h-full rounded-full bg-dark-900 flex flex-col items-center justify-center">
-                                <span className="text-4xl font-black bg-gradient-to-br from-primary-400 to-secondary-400 bg-clip-text text-transparent">
-                                  {product.overall_score}
-                                </span>
-                                <span className="text-xs text-slate-500 font-medium">SCORE</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
 
-                      {/* Product Info */}
-                      <div className="pr-28">
-                        {/* Category Badge */}
-                        {product.category && (
-                          <div className="inline-block px-3 py-1 bg-primary-500/10 border border-primary-500/20 rounded-full mb-4">
-                            <span className="text-xs text-primary-400 font-semibold uppercase tracking-wide">
-                              {product.category}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Product Name */}
-                        <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 group-hover:text-primary-400 transition-colors">
-                          {product.name}
-                        </h3>
-
-                        {/* Summary */}
-                        {product.summary && (
-                          <p className="text-slate-400 leading-relaxed mb-6 line-clamp-3">
-                            {product.summary}
-                          </p>
-                        )}
-
-                        {/* Meta Info */}
-                        <div className="flex flex-wrap gap-4 text-sm text-slate-500">
-                          {product.last_updated && (
-                            <span className="flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                              Updated {new Date(product.last_updated).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          )}
-                          {product.status && (
-                            <span className="px-2 py-0.5 bg-green-500/10 text-green-400 rounded-full font-medium">
-                              {product.status}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* View Full Button - Appears on Hover */}
-                      <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
-                          <span className="text-white font-semibold">View Full Intelligence</span>
-                          <span className="text-primary-400">→</span>
-                        </div>
-                      </div>
-
-                      {/* Hover glow effect */}
-                      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary-500/10 to-secondary-500/10"></div>
-                      </div>
+                  {suggestions.length > 0 && (
+                    <div className="mt-5 flex flex-wrap gap-2 justify-center">
+                      {suggestions.slice(0, 8).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => navigate(`/search?q=${encodeURIComponent(s)}`)}
+                          className="text-sm font-semibold text-mint-800 bg-mint-50 border border-mint-100 rounded-full px-3 py-1 hover:bg-mint-100 transition-colors"
+                          type="button"
+                        >
+                          {s}
+                        </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+
+                  <div className="mt-5 flex justify-center">
+                    <Button
+                      loading={building}
+                      onClick={handleBuildNew}
+                      leftIcon={<Sparkles className="h-5 w-5" />}
+                      disabled={building || (suggestions.length > 0)}
+                      title={suggestions.length > 0 ? 'Pick a model first' : undefined}
+                    >
+                      Build intelligence report
+                    </Button>
+                  </div>
+                </Card>
               )}
             </div>
           </div>

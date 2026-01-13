@@ -1,0 +1,15 @@
+{
+  "name": "clearpick-ai-root",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Root package.json for Vercel builds. Frontend lives in ./frontend",
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
+    "lint": "npm --prefix frontend run lint",
+    "postinstall": "npm --prefix frontend install"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -6,6 +6,7 @@ const db = require('./config/database');
 // Use SIMPLE builder - no complications!
 const DossierBuilder = require('./services/simpleDossierBuilder');
 const productImageService = require('./services/productImageService');
+const productValidator = require('./services/productValidator');
 
 // Import Windsurf's middleware (converting from ES modules)
 const rateLimit = require('express-rate-limit');
@@ -72,6 +73,7 @@ async function ensureSchema() {
       name TEXT UNIQUE NOT NULL,
       category TEXT,
       image_url TEXT,
+      images JSONB DEFAULT '[]'::JSONB,
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
@@ -80,6 +82,11 @@ async function ensureSchema() {
   // Add image_url column if it doesn't exist (for existing databases)
   await db.query(`
     ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
+  `);
+
+  // Add images column if it doesn't exist (for multiple images support)
+  await db.query(`
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::JSONB;
   `);
 
   await db.query(`
@@ -269,6 +276,10 @@ app.get('/api/search', async (req, res) => {
       });
     }
 
+    const queryText = String(q || '').trim();
+    const querySpec = productValidator.isTooGeneric(queryText);
+    const queryNeedsDisambiguation = querySpec?.tooGeneric === true;
+
     const results = await db.query(
       `SELECT p.id, p.name, p.category, p.created_at,
               d.overall_score, d.summary, d.status, d.last_updated
@@ -277,14 +288,114 @@ app.get('/api/search', async (req, res) => {
        WHERE p.name ILIKE $1
        ORDER BY d.overall_score DESC NULLS LAST, p.created_at DESC
        LIMIT 20`,
-      [`%${q}%`]
+      [`%${queryText}%`]
     );
+
+    // If the USER query itself is ambiguous (e.g., "JBL"), don't return generic products like "JBL"
+    // even if they exist in the DB (they are effectively junk/too broad).
+    const productsRaw = results.rows || [];
+    const products = queryNeedsDisambiguation
+      ? productsRaw.filter((p) => !productValidator.isTooGeneric(p?.name || '')?.tooGeneric)
+      : productsRaw;
+
+    // Suggestions for "no results" cases (typos / too-generic queries)
+    let suggestions = [];
+    let needsDisambiguation = queryNeedsDisambiguation;
+    let didYouMean = null;
+
+    const levenshtein = (a, b) => {
+      const s = String(a || '');
+      const t = String(b || '');
+      const n = s.length;
+      const m = t.length;
+      if (n === 0) return m;
+      if (m === 0) return n;
+      const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+      for (let i = 0; i <= n; i++) dp[i][0] = i;
+      for (let j = 0; j <= m; j++) dp[0][j] = j;
+      for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= m; j++) {
+          const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + cost
+          );
+        }
+      }
+      return dp[n][m];
+    };
+
+    const similarity = (a, b) => {
+      const s = String(a || '').toLowerCase();
+      const t = String(b || '').toLowerCase();
+      const maxLen = Math.max(s.length, t.length) || 1;
+      const dist = levenshtein(s, t);
+      return 1 - dist / maxLen;
+    };
+
+    const addSuggestionsUnique = (arr) => {
+      for (const item of arr || []) {
+        if (typeof item === 'string' && item.trim() && !suggestions.includes(item.trim())) {
+          suggestions.push(item.trim());
+        }
+      }
+    };
+
+    if (needsDisambiguation) {
+      // Brand/category disambiguation suggestions (fast, no DB scan)
+      addSuggestionsUnique(productValidator.buildIphoneVariantSuggestions(queryText));
+      addSuggestionsUnique(productValidator.buildIphoneFamilySuggestions(queryText));
+      addSuggestionsUnique(productValidator.getBrandSuggestions(productValidator.normalizeForCompare(queryText)));
+    }
+
+    if (products.length === 0) {
+      // 2) Fuzzy suggestions from existing products (typos)
+      if (queryText.length >= 3) {
+        try {
+          const pool = await db.query(
+            'SELECT name FROM products ORDER BY updated_at DESC NULLS LAST, created_at DESC LIMIT 300'
+          );
+
+          const scored = [];
+          for (const row of pool.rows || []) {
+            const name = row?.name;
+            if (!name) continue;
+            const score = similarity(queryText, name);
+            if (score >= 0.55) scored.push({ name, score });
+          }
+
+          scored.sort((a, b) => b.score - a.score);
+          const top = scored.slice(0, 5).map((x) => x.name);
+          addSuggestionsUnique(top);
+
+          const best = scored[0];
+          if (best && best.score >= 0.85 && best.name.toLowerCase() !== queryText.toLowerCase()) {
+            didYouMean = best.name;
+          }
+        } catch {
+          // ignore DB suggestion failures
+        }
+      }
+    }
+
+    // Final clean-up: remove non-actionable suggestions (same as query / still too generic)
+    const normalizedQuery = queryText.toLowerCase();
+    suggestions = suggestions.filter((s) => {
+      const name = String(s || '').trim();
+      if (!name) return false;
+      if (name.toLowerCase() === normalizedQuery) return false;
+      return !productValidator.isTooGeneric(name)?.tooGeneric;
+    });
 
     res.json({
       success: true,
-      query: q,
-      count: results.rows.length,
-      products: results.rows
+      query: queryText,
+      count: products.length,
+      products,
+      ...(suggestions.length ? { suggestions } : {}),
+      ...(didYouMean ? { didYouMean } : {}),
+      ...(needsDisambiguation ? { needsDisambiguation: true } : {}),
     });
 
   } catch (error) {
@@ -344,14 +455,38 @@ app.get('/api/products/:id', async (req, res) => {
     }
 
     // Backfill image_url for existing products (no need to rebuild the whole dossier)
-    if (!dossier?.product?.image_url) {
-      const img = await productImageService.getImageUrl(dossier?.product?.name).catch(() => null);
-      if (img) {
-        await db.query(
-          'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2',
-          [img, dossier.product.id]
-        );
-        dossier.product.image_url = img;
+    const hasImages =
+      Array.isArray(dossier?.product?.images) && dossier.product.images.length > 0;
+
+    if (!dossier?.product?.image_url || !hasImages) {
+      const imgs = await productImageService
+        .getMultipleImages(dossier?.product?.name, 3)
+        .catch(() => []);
+      const primary = imgs?.[0]?.url || null;
+
+      if (primary || (Array.isArray(imgs) && imgs.length > 0)) {
+        try {
+          await db.query(
+            'UPDATE products SET image_url = $1, images = $2, updated_at = NOW() WHERE id = $3',
+            [primary, JSON.stringify(imgs), dossier.product.id]
+          );
+          dossier.product.image_url = primary || dossier.product.image_url;
+          dossier.product.images = imgs;
+        } catch (e) {
+          // Backward compatibility: production DB may not have products.images yet
+          const msg = String(e?.message || '');
+          if (msg.includes('column') && msg.includes('images') && msg.includes('does not exist')) {
+            if (primary) {
+              await db.query(
+                'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2',
+                [primary, dossier.product.id]
+              );
+              dossier.product.image_url = primary;
+            }
+          } else {
+            throw e;
+          }
+        }
       }
     }
 
@@ -385,13 +520,44 @@ app.post('/api/products/build', async (req, res) => {
       });
     }
 
-    // Check if product already exists WITH a completed dossier
+    // 🔍 STEP 1: Validate & Translate product name (supports ALL languages!)
+    console.log(`\n🌍 Validating & translating: "${productName}"`);
+    const validation = await productValidator.validateAndTranslate(productName);
+    
+    if (validation?.needsDisambiguation) {
+      return res.status(400).json({
+        success: false,
+        code: 'NEEDS_DISAMBIGUATION',
+        error: 'Query is too broad',
+        reason: validation.reason || 'Please specify a model (not just a brand/category).',
+        originalInput: validation.originalName || productName,
+        translatedName: validation.translatedName || null,
+        suggestions: Array.isArray(validation.suggestions) ? validation.suggestions : [],
+      });
+    }
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid product name',
+        reason: validation.reason,
+        originalInput: validation.originalName,
+        suggestion: 'Please enter a real product name (e.g., iPhone 15, Galaxy S24, MacBook Pro)'
+      });
+    }
+
+    // Use translated name for building dossier
+    const finalProductName = validation.translatedName;
+    console.log(`   ✅ Valid product: "${validation.originalName}" → "${finalProductName}" (${validation.language})`);
+
+
+    // Check if product already exists WITH a completed dossier (use translated name)
     const existing = await db.query(
       `SELECT p.id, d.overall_score 
        FROM products p 
        LEFT JOIN dossiers d ON p.id = d.product_id 
        WHERE p.name = $1`,
-      [productName]
+      [finalProductName]
     );
 
     // If product exists AND has a dossier with scores, return it
@@ -401,7 +567,7 @@ app.post('/api/products/build', async (req, res) => {
 
       // Backfill image_url for existing products (so UI shows an image immediately)
       if (dossier && !dossier?.product?.image_url) {
-        const img = await productImageService.getImageUrl(dossier?.product?.name || productName).catch(() => null);
+        const img = await productImageService.getImageUrl(dossier?.product?.name || finalProductName).catch(() => null);
         if (img) {
           await db.query(
             'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2',
@@ -415,16 +581,21 @@ app.post('/api/products/build', async (req, res) => {
         success: true,
         message: 'Product dossier already exists',
         productId,
-        data: dossier
+        data: dossier,
+        translation: validation.language !== 'English' ? {
+          original: validation.originalName,
+          translated: finalProductName,
+          language: validation.language
+        } : null
       });
     }
 
     // Build new dossier (or rebuild if product exists but no dossier)
     const existingProductId = existing.rows.length > 0 ? existing.rows[0].id : null;
-    console.log(`\n🚀 Building dossier for: ${productName}${existingProductId ? ' (rebuilding)' : ' (new)'}`);
+    console.log(`\n🚀 Building dossier for: ${finalProductName}${existingProductId ? ' (rebuilding)' : ' (new)'}`);
     console.log(`   Using Smart AI Routing (Gemini only - cost savings mode)`);
     
-    const result = await builder.buildDossier(productName, category || 'general');
+    const result = await builder.buildDossier(finalProductName, category || 'general');
 
     // Get the full dossier
     const dossier = await builder.getDossier(result.productId);

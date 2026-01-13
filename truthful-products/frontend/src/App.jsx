@@ -1,11 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
 import AdminLogin from './pages/AdminLogin';
-import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy loaded pages for better performance
 const ProductIntel = lazy(() => import('./pages/ProductIntel'));
@@ -26,18 +25,15 @@ const DossierPagePremium = lazy(() => import('./pages/DossierPagePremium'));
 
 // Loading component
 const LoadingSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center bg-bg-primary">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+  <div className="min-h-screen flex items-center justify-center bg-surface">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mint-600"></div>
   </div>
 );
 
 function AppContent() {
-  const location = useLocation();
-  const isHomePage = location.pathname === '/';
-
   return (
     <div className="min-h-screen flex flex-col">
-      {!isHomePage && <Header />}
+      <Header />
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -70,42 +66,42 @@ function AppContent() {
           {/* Original Routes */}
           <Route path="/product-intel" element={
             <Suspense fallback={<LoadingSpinner />}>
-              <ProtectedRoute><ProductIntel /></ProtectedRoute>
+              <ProductIntel />
             </Suspense>
           } />
           <Route path="/pricing" element={
             <Suspense fallback={<LoadingSpinner />}>
-              <ProtectedRoute><Pricing /></ProtectedRoute>
+              <Pricing />
             </Suspense>
           } />
           <Route path="/about" element={
             <Suspense fallback={<LoadingSpinner />}>
-              <ProtectedRoute><AboutUs /></ProtectedRoute>
+              <AboutUs />
             </Suspense>
           } />
           <Route path="/contact" element={
             <Suspense fallback={<LoadingSpinner />}>
-              <ProtectedRoute><Contact /></ProtectedRoute>
+              <Contact />
             </Suspense>
           } />
           <Route path="/terms" element={
             <Suspense fallback={<LoadingSpinner />}>
-              <ProtectedRoute><TermsOfService /></ProtectedRoute>
+              <TermsOfService />
             </Suspense>
           } />
           <Route path="/privacy" element={
             <Suspense fallback={<LoadingSpinner />}>
-              <ProtectedRoute><PrivacyPolicy /></ProtectedRoute>
+              <PrivacyPolicy />
             </Suspense>
           } />
           <Route path="/cookies" element={
             <Suspense fallback={<LoadingSpinner />}>
-              <ProtectedRoute><CookiePolicy /></ProtectedRoute>
+              <CookiePolicy />
             </Suspense>
           } />
         </Routes>
       </main>
-      {!isHomePage && <Footer />}
+      <Footer />
       <Toaster position="top-right" />
     </div>
   );

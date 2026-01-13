@@ -1,5 +1,0 @@
-1. What are the exact data sources the system is currently using to fetch product information (APIs, web scraping, or static datasets)?
-2. How does the sentiment analysis logic work—is it using an LLM to analyze review text, or is it based on star ratings and keyword matching?
-3. Are there any built-in mechanisms or filters in the code to identify and exclude fake reviews, bots, or biased data?
-4. How is the affiliate link integration structured in the backend, and does the system support real-time price comparison between multiple retailers?
-5. Does the system store user search history or personal data, and what is the current architecture for handling user privacy?

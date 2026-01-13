@@ -15,7 +15,10 @@
     "test-dossier": "node test-dossier.js",
     "test-router": "node test-smart-router.js",
     "test-claude": "node test-claude-only.js",
-    "setup-db": "powershell -ExecutionPolicy Bypass -File setup-database.ps1"
+    "setup-db": "powershell -ExecutionPolicy Bypass -File setup-database.ps1",
+    "migrate": "node run-migrations.js",
+    "clear-dossiers": "node scripts/clear-dossiers.js",
+    "rebuild-all": "node scripts/rebuild-all-products.js"
   },
   "keywords": [
     "product-research",

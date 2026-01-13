@@ -1,12 +1,36 @@
-import React, { useState } from 'react';
-import { Mail, CheckCircle, Lock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Mail, CheckCircle, Lock, Sparkles, ArrowRight, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/common/Logo';
+import { Button, Card } from '../components/ui';
+
+// Smart API URL detection (keep in sync with SearchPagePremium)
+const getAPIUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  const hostname = window.location.hostname;
+  if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com' || hostname.includes('vercel.app')) {
+    return 'https://clearpick-ai.onrender.com/api';
+  }
+  return 'http://localhost:5000/api';
+};
+const API_URL = getAPIUrl();
 
 const Home = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [heroQuery, setHeroQuery] = useState('');
+  const [stats, setStats] = useState(null);
   const navigate = useNavigate();
+
+  const popular = useMemo(() => (['iPhone 15', 'Dyson V15', 'Sony WH-1000XM5']), []);
+
+  useEffect(() => {
+    // Best-effort stats for social proof
+    fetch(`${API_URL.replace(/\/$/, '')}/stats`, { method: 'GET' })
+      .then((r) => r.json())
+      .then((d) => (d?.success ? setStats(d.data) : null))
+      .catch(() => null);
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -34,44 +58,119 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary relative overflow-hidden flex items-center justify-center px-4">
-      {/* Background gradient effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-bg-primary via-bg-secondary to-bg-primary"></div>
-      
-      {/* Animated background blobs */}
-      <div className="absolute top-20 left-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-[floatBlob_20s_ease-in-out_infinite] -z-10"></div>
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-[floatBlob_25s_ease-in-out_infinite_reverse] -z-10"></div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-[floatBlob_30s_ease-in-out_infinite] -z-10" style={{ animationDelay: '5s' }}></div>
-      
-      <div className="max-w-2xl w-full text-center relative z-10">
-        <div className="flex justify-center mb-12 animate-[fadeInDown_0.8s_ease-out]">
-          <Logo size="large" lightMode={true} />
+    <div className="min-h-screen bg-surface relative overflow-hidden">
+      {/* Soft background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white via-mint-50 to-white" />
+      <div className="absolute -top-32 -left-24 h-96 w-96 rounded-full bg-mint-200/40 blur-3xl" />
+      <div className="absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full bg-cyan-200/35 blur-3xl" />
+
+      <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-24">
+        <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <Logo size="large" />
+          </div>
+
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-4 py-2 text-sm font-semibold text-mint-800 shadow-card">
+            <Sparkles className="h-4 w-4 text-mint-600" />
+            Real reviews. No marketing BS.
+          </div>
+
+          <h1 className="mt-6 text-5xl md:text-6xl font-black tracking-tight text-ink">
+            Bought something you regret?
+            <br />
+            <span className="bg-gradient-to-r from-mint-700 to-cyan-600 bg-clip-text text-transparent">
+              Never again.
+            </span>
+          </h1>
+
+          <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
+            Get the truth about any product in <span className="font-semibold text-ink">60 seconds</span> —
+            from real reviews and discussions, not ads.
+          </p>
+
+          {/* Hero search (direct, aggressive CTA) */}
+          <div className="mt-10 max-w-3xl mx-auto">
+            <Card className="p-4 md:p-5">
+              <div className="flex flex-col md:flex-row gap-3 items-stretch">
+                <div className="flex-1">
+                  <label className="block">
+                    <div className="relative flex items-center rounded-2xl border-2 border-border bg-surface px-4 transition-all duration-200 focus-within:border-mint-500 focus-within:ring-4 focus-within:ring-[color:var(--ring)]">
+                      <div className="mr-3 text-mint-600">
+                        <Search className="h-5 w-5" />
+                      </div>
+                      <input
+                        value={heroQuery}
+                        onChange={(e) => setHeroQuery(e.target.value)}
+                        placeholder="Search any product… (e.g., iPhone 15, Dyson V15)"
+                        className="h-12 w-full bg-transparent text-ink placeholder:text-slate-400 focus:outline-none"
+                        onKeyDown={(e) => e.key === 'Enter' && navigate(`/search?q=${encodeURIComponent(heroQuery)}`)}
+                      />
+                    </div>
+                  </label>
+                </div>
+                <Button
+                  size="lg"
+                  className="md:w-48"
+                  leftIcon={<Sparkles className="h-5 w-5" />}
+                  onClick={() => navigate(`/search?q=${encodeURIComponent(heroQuery)}`)}
+                >
+                  Analyze
+                </Button>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                <span className="text-sm text-slate-500 mr-2">Popular:</span>
+                {popular.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => navigate(`/search?q=${encodeURIComponent(q)}`)}
+                    className="text-sm font-semibold text-mint-800 bg-mint-50 border border-mint-100 rounded-full px-3 py-1 hover:bg-mint-100 transition-colors"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Social proof */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-600">
+            <span className="font-semibold text-ink">
+              {stats?.products_analyzed != null ? `${stats.products_analyzed.toLocaleString()} products analyzed` : 'Products analyzed: updating…'}
+            </span>
+            <span className="text-slate-400">•</span>
+            <span className="font-semibold text-ink">
+              {stats?.dossiers_ready != null ? `${stats.dossiers_ready.toLocaleString()} dossiers ready` : 'Dossiers ready: updating…'}
+            </span>
+            <span className="text-slate-400">•</span>
+            <span className="italic">“Saved me from buying a lemon.”</span>
+          </div>
         </div>
 
-        <h1 className="text-6xl md:text-7xl font-black text-white mb-6 animate-slide-up leading-tight">
-          Stop Guessing.
-          <br />
-          <span className="bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 bg-clip-text text-transparent">
-            Start Knowing.
-          </span>
-        </h1>
+        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="p-6">
+            <div className="text-3xl mb-4">🧠</div>
+            <h3 className="text-lg font-bold text-ink mb-2">Honest by design</h3>
+            <p className="text-slate-600 text-sm">We surface both pros and cons, with confidence and sources.</p>
+          </Card>
+          <Card className="p-6">
+            <div className="text-3xl mb-4">⚡</div>
+            <h3 className="text-lg font-bold text-ink mb-2">Fast results</h3>
+            <p className="text-slate-600 text-sm">Caching + smooth loading states for a “butter” experience.</p>
+          </Card>
+          <Card className="p-6">
+            <div className="text-3xl mb-4">🛡️</div>
+            <h3 className="text-lg font-bold text-ink mb-2">Confidence scoring</h3>
+            <p className="text-slate-600 text-sm">Know when data is strong and when it’s still early.</p>
+          </Card>
+        </div>
 
-        <p className="text-2xl md:text-3xl text-slate-300 mb-4 font-semibold animate-slide-up" style={{animationDelay: '0.1s'}}>
-          Truth-Powered Product Intelligence
-        </p>
-        
-        <p className="text-lg md:text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-slide-up" style={{animationDelay: '0.2s'}}>
-          We analyze <span className="text-primary-400 font-semibold">real reviews</span> from across the web.
-          No BS. No ads. Just honest insights in <span className="text-secondary-400 font-semibold">30 seconds</span>.
-        </p>
-
-        <div className="bg-white/5 backdrop-blur-[10px] rounded-2xl p-8 mb-12 border border-white/10 shadow-lg animate-[fadeInUp_1.2s_ease-out_1s_backwards] transition-all duration-400 hover:border-primary/20 hover:shadow-[0_12px_48px_rgba(0,0,0,0.4)]">
-          <h2 className="text-3xl font-bold text-white mb-3">
-            Get Early Access
-          </h2>
-          <p className="text-slate-300 mb-6 text-lg">
-            Join <span className="text-primary-400 font-semibold">2,847 smart shoppers</span> on the waitlist
-          </p>
+        <div className="mt-14">
+          <Card className="p-8">
+            <h2 className="text-2xl font-black text-ink mb-2">Get Early Access</h2>
+            <p className="text-slate-600 mb-6">
+              Join the waitlist — we’ll email you when it’s ready.
+            </p>
 
           {!submitted ? (
             <form 
@@ -89,95 +188,32 @@ const Home = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                className="flex-1 px-6 py-4 rounded-lg bg-white/5 border-2 border-white/10 text-text-primary placeholder-text-muted focus:outline-none focus:border-primary focus:shadow-[0_0_20px_rgba(0,255,179,0.3)] focus:-translate-y-0.5 transition-all duration-300"
+                className="flex-1 input-field"
               />
               <button
                 type="submit"
-                className="relative overflow-hidden px-8 py-4 bg-primary hover:bg-primary-hover text-bg-primary font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,255,179,0.4)] active:-translate-y-0 active:shadow-[0_6px_20px_rgba(0,255,179,0.3)] group"
+                className="btn-primary h-12 px-6"
               >
                 <Mail size={20} className="transition-transform duration-300 group-hover:scale-110" />
                 Join Waitlist
               </button>
             </form>
           ) : (
-            <div className="flex items-center justify-center gap-3 text-primary text-lg font-semibold py-4 animate-[successPop_0.5s_cubic-bezier(0.68,-0.55,0.265,1.55)]">
+            <div className="flex items-center justify-center gap-3 text-mint-700 text-lg font-semibold py-4">
               <CheckCircle size={24} className="animate-[successPop_0.5s_cubic-bezier(0.68,-0.55,0.265,1.55)_0.2s_backwards]" />
               <span>Thanks! You're on the list!</span>
             </div>
           )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white/5 backdrop-blur-[10px] rounded-xl p-6 border border-white/10 transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,255,179,0.2)] hover:border-primary/50">
-            <div className="text-4xl mb-3">🤖</div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">AI Analysis</h3>
-            <p className="text-text-muted text-sm">
-              Unbiased insights powered by advanced AI
-            </p>
-          </div>
-
-          <div className="bg-white/5 backdrop-blur-[10px] rounded-xl p-6 border border-white/10 transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,255,179,0.2)] hover:border-primary/50">
-            <div className="text-4xl mb-3">🏪</div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">Independent Retailers</h3>
-            <p className="text-text-muted text-sm">
-              Support small businesses, not just big tech
-            </p>
-          </div>
-
-          <div className="bg-white/5 backdrop-blur-[10px] rounded-xl p-6 border border-white/10 transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,255,179,0.2)] hover:border-primary/50">
-            <div className="text-4xl mb-3">💎</div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">100% Transparent</h3>
-            <p className="text-text-muted text-sm">
-              No hidden agendas, just honest recommendations
-            </p>
-          </div>
-        </div>
-
-        <div className="text-text-muted mb-8">
-          <p className="text-sm">
-            Expected Launch: <span className="text-primary font-semibold" style={{ textShadow: '0 0 10px rgba(0, 255, 179, 0.3)' }}>Q1 2026</span>
-          </p>
-        </div>
-
-        <div className="bg-white/5 backdrop-blur-[10px] rounded-xl p-6 border border-white/10 mb-8">
-          <h3 className="text-lg font-semibold text-text-primary mb-6">Trusted by shoppers, powered by data from:</h3>
-          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8">
-            <svg className="h-8 opacity-70 hover:opacity-100 transition-all duration-300 hover:scale-110" viewBox="0 0 120 30" fill="#E0E0E0">
-              <text x="0" y="20" fontSize="20" fontWeight="bold">Amazon</text>
-            </svg>
-            <svg className="h-8 opacity-70 hover:opacity-100 transition-all duration-300 hover:scale-110" viewBox="0 0 80 30" fill="#E0E0E0">
-              <text x="0" y="20" fontSize="20" fontWeight="bold">eBay</text>
-            </svg>
-            <svg className="h-8 opacity-70 hover:opacity-100 transition-all duration-300 hover:scale-110" viewBox="0 0 120 30" fill="#E0E0E0">
-              <text x="0" y="20" fontSize="20" fontWeight="bold">Walmart</text>
-            </svg>
-            <svg className="h-8 opacity-70 hover:opacity-100 transition-all duration-300 hover:scale-110" viewBox="0 0 130 30" fill="#E0E0E0">
-              <text x="0" y="20" fontSize="20" fontWeight="bold">Best Buy</text>
-            </svg>
-            <svg className="h-8 opacity-70 hover:opacity-100 transition-all duration-300 hover:scale-110" viewBox="0 0 100 30" fill="#E0E0E0">
-              <text x="0" y="20" fontSize="20" fontWeight="bold">Target</text>
-            </svg>
-          </div>
-        </div>
-
-        <div className="text-text-muted mb-4">
-          <p className="text-sm mb-2">Questions? Get in touch:</p>
-          <a href="mailto:hello@clearpick.ai" className="text-primary hover:text-primary-hover font-semibold transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(0,255,179,0.5)]">
-            hello@clearpick.ai
-          </a>
-        </div>
-
-        <div className="text-text-muted text-sm">
-          <p>ClearPick AI © 2025 | Smart Shopping Intelligence</p>
+          </Card>
         </div>
 
         {/* כפתור סודי לכניסת מנהל */}
         <button
           onClick={() => navigate('/admin-login')}
-          className="fixed bottom-4 left-4 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-all duration-300 opacity-30 hover:opacity-100 hover:scale-110 backdrop-blur-[10px] border border-white/10"
+          className="fixed bottom-4 left-4 p-2 bg-white/70 hover:bg-white rounded-full transition-all duration-200 opacity-40 hover:opacity-100 hover:scale-105 border border-border shadow-card"
           title="Admin Login"
         >
-          <Lock size={20} className="text-text-secondary" />
+          <Lock size={20} className="text-slate-700" />
         </button>
       </div>
     </div>
