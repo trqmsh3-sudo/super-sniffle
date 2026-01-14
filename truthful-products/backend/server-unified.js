@@ -679,8 +679,9 @@ app.post('/api/products/:id/rebuild', async (req, res) => {
 // ADMIN ROUTES (Cursor)
 // ============================================================================
 
-const adminRoutes = require('./routes/admin');
-app.use('/api/admin', adminRoutes);
+// Temporarily disabled - admin routes need update for V2.0 simpleDossierBuilder
+// const adminRoutes = require('./routes/admin');
+// app.use('/api/admin', adminRoutes);
 
 // ============================================================================
 // ERROR HANDLING - Windsurf's approach

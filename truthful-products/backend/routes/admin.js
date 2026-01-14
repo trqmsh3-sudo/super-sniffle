@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const DossierBuilder = require('../services/dossierBuilder');
+const SimpleDossierBuilder = require('../services/simpleDossierBuilder');
 
 // Initialize builder (shared instance for stats)
-const builder = new DossierBuilder();
+const builder = new SimpleDossierBuilder();
 
 /**
  * GET /api/admin/ai-stats
