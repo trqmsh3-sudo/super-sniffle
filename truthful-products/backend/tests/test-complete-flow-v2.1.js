@@ -5,7 +5,7 @@
  * Usage: node tests/test-complete-flow-v2.1.js [productName]
  */
 
-require('dotenv').config({ path: '../.env' });
+require('../loadEnv');
 const SimpleDossierBuilder = require('../services/simpleDossierBuilder');
 const redisClient = require('../config/redis');
 

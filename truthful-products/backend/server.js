@@ -1,10 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
+require('./loadEnv');
 const apiRoutes = require('./routes/api');
-
-// Load environment variables
-dotenv.config();
+const adminRoutes = require('./routes/admin');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,12 +13,22 @@ app.use(cors({
   origin: true,
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging
+// Request logging middleware
 app.use((req, res, next) => {
+  const start = Date.now();
+  
+  // Log request
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  
+  // Log response
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.path} ${res.statusCode} - ${duration}ms`);
+  });
+  
   next();
 });
 
@@ -47,27 +56,13 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api', apiRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    error: {
-      message: err.message || 'Internal server error',
-      status: err.status || 500
-    }
-  });
-});
+// 404 handler (must come BEFORE error handler)
+app.use(notFoundHandler);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    error: {
-      message: 'Route not found',
-      status: 404
-    }
-  });
-});
+// Global error handling middleware (must come LAST)
+app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {

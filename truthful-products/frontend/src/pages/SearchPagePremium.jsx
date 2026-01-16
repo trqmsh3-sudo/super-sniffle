@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Sparkles, TrendingUp, Shield, Zap } from 'lucide-react';
 import { Badge, Button, Card, Input, Skeleton } from '../components/ui';
+import { buildProduct } from '../services/api';
+import { useToast } from '../components/Toast';
+import BuildingAnimation from '../components/BuildingAnimation';
 
 // Smart API URL detection
 const getAPIUrl = () => {
@@ -32,11 +35,13 @@ const SearchPagePremium = () => {
   const [didYouMean, setDidYouMean] = useState(null);
   const [loading, setLoading] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [buildingProduct, setBuildingProduct] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState(null);
   const [backendStatus, setBackendStatus] = useState('idle'); // idle | waking | ready | degraded
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
 
   const wakeBackend = async () => {
     setBackendStatus((s) => (s === 'ready' ? s : 'waking'));
@@ -138,43 +143,44 @@ const SearchPagePremium = () => {
   };
 
   const handleBuildNew = async () => {
-    if (!query || typeof query !== 'string' || !query.trim()) return;
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      toast.error('אנא הכנס שם מוצר');
+      return;
+    }
     
     setBuilding(true);
+    setBuildingProduct(query);
     setError(null);
     
     try {
-      const response = await fetch(`${API_URL}/products/build`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          productName: query,
-          category: 'general'
-        })
-      });
+      // Show building animation and call SimpleDossierBuilder
+      const result = await buildProduct(query, 'general');
       
-      const data = await response.json();
-      
-      if (data.success) {
-        navigate(`/product/${data.productId}`);
+      if (result.success) {
+        // Success!
+        toast.success('✅ ניתוח הושלם בהצלחה!');
+        
+        // Navigate to dossier page
+        setTimeout(() => {
+          navigate(`/dossier/${result.productId}`);
+        }, 500);
       } else {
-        if (data.code === 'NEEDS_DISAMBIGUATION') {
-          setError(data.reason || 'Please specify a product model.');
-          setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
-          setResults([]);
-        } else {
-          setError(data.error || 'Failed to build dossier');
-        }
+        toast.error(result.error || 'שגיאה בבניית התיק');
+        setBuilding(false);
       }
     } catch (err) {
       console.error('Build error:', err);
-      setError('Unable to build dossier');
-    } finally {
+      toast.error(`❌ שגיאה: ${err.message || 'לא הצלחנו לבנות את התיק'}`);
       setBuilding(false);
     }
   };
 
   const exampleQueries = useMemo(() => (['iPhone 15', 'AirPods Pro 2', 'Dyson V15', 'Sony WH-1000XM5']), []);
+
+  // Show BuildingAnimation while building dossier
+  if (building) {
+    return <BuildingAnimation productName={buildingProduct} estimatedTime={30} />;
+  }
 
   return (
     <div className="min-h-screen bg-surface relative overflow-hidden">

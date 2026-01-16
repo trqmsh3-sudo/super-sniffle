@@ -2,13 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { logger } from './utils/logger.js';
 import { redis } from './config/redis.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import productIntelRoutes from './routes/productIntel.routes.js';
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const runtimeEnvPath = path.resolve(__dirname, '../env.runtime');
+const dotenvConfig = fs.existsSync(runtimeEnvPath) ? { path: runtimeEnvPath } : undefined;
+dotenv.config(dotenvConfig);
 
 const app = express();
 const PORT = process.env.PORT || 5000;

@@ -23,6 +23,9 @@ const ProductDossier = lazy(() => import('./components/product/ProductDossier'))
 const SearchPagePremium = lazy(() => import('./pages/SearchPagePremium'));
 const DossierPagePremium = lazy(() => import('./pages/DossierPagePremium'));
 
+// Admin
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+
 // Loading component
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-surface">
@@ -38,6 +41,11 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/admin" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <AdminDashboard />
+            </Suspense>
+          } />
           
           {/* ClearPick AI Routes - Premium Version */}
           <Route path="/search" element={
@@ -51,6 +59,18 @@ function AppContent() {
             </Suspense>
           } />
           
+          {/* Classic (legacy) routes */}
+          <Route path="/classic" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <ProductSearch />
+            </Suspense>
+          } />
+          <Route path="/classic/product/:productId" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <ProductDossier />
+            </Suspense>
+          } />
+
           {/* Legacy routes (old components) */}
           <Route path="/search-old" element={
             <Suspense fallback={<LoadingSpinner />}>

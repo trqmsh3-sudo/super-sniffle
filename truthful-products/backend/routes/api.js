@@ -1,158 +1,218 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
+const SimpleDossierBuilder = require('../services/simpleDossierBuilder');
+const { buildLimiter } = require('../middleware/rateLimit');
+
+// Initialize dossier builder
+const builder = new SimpleDossierBuilder();
 
 /**
  * GET /api/search
- * Search for products
+ * Search for existing products in database
  */
 router.get('/search', async (req, res) => {
   try {
     const { q } = req.query;
     
-    if (!q) {
+    // Validation
+    if (!q || typeof q !== 'string' || q.trim().length === 0) {
       return res.status(400).json({
+        success: false,
         error: 'Search query is required'
       });
     }
 
+    const query = q.trim();
+    console.log(`🔍 Searching database for: "${query}"`);
+
+    // Search with ILIKE for fuzzy matching
     const products = await db.query(`
-      SELECT p.*, d.overall_score, d.status
+      SELECT 
+        p.id, p.name, p.category, p.image_url,
+        d.overall_score, d.confidence_score, d.status, d.summary
       FROM products p
       LEFT JOIN dossiers d ON p.id = d.product_id
       WHERE p.name ILIKE $1
-      ORDER BY d.overall_score DESC NULLS LAST
-      LIMIT 10
-    `, [`%${q}%`]);
+      ORDER BY 
+        d.overall_score DESC NULLS LAST,
+        d.confidence_score DESC NULLS LAST,
+        p.name ASC
+      LIMIT 20
+    `, [`%${query}%`]);
+
+    console.log(`   Found ${products.rows.length} products`);
 
     res.json({
       success: true,
-      data: products.rows,
+      query: query,
+      products: products.rows,
       count: products.rows.length
     });
 
   } catch (error) {
     console.error('Search error:', error);
     res.status(500).json({
-      error: error.message,
-      success: false
+      success: false,
+      error: error.message || 'Search failed',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
 
 /**
  * GET /api/products/:id
- * Get product details with dossier
+ * Get product details with dossier (using SimpleDossierBuilder.getDossier)
  */
 router.get('/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get product
-    const product = await db.query(
-      'SELECT * FROM products WHERE id = $1',
-      [id]
-    );
-    
-    if (product.rows.length === 0) {
-      return res.status(404).json({
-        error: 'Product not found',
-        success: false
+    // Validation
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid product ID'
       });
     }
     
-    // Get dossier
-    const dossier = await db.query(
-      'SELECT * FROM dossiers WHERE product_id = $1',
-      [id]
-    );
+    // Get complete dossier using builder method
+    const dossier = await builder.getDossier(parseInt(id));
     
-    // Get recent reviews
-    const reviews = await db.query(
-      'SELECT * FROM reviews WHERE product_id = $1 ORDER BY scraped_at DESC LIMIT 10',
-      [id]
-    );
+    if (!dossier) {
+      return res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      });
+    }
 
     res.json({
       success: true,
-      data: {
-        product: product.rows[0],
-        dossier: dossier.rows[0] || null,
-        reviews: reviews.rows
-      }
+      data: dossier
     });
 
   } catch (error) {
     console.error('Get product error:', error);
     res.status(500).json({
-      error: error.message,
-      success: false
+      success: false,
+      error: error.message || 'Failed to get product',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
 
 /**
  * POST /api/products/build
- * Trigger dossier building for a new product
+ * Build product dossier using SimpleDossierBuilder (Reddit + AI + Cache + Images!)
+ * Rate limited: 10 builds per IP per 15 minutes
  */
-router.post('/products/build', async (req, res) => {
+router.post('/products/build', buildLimiter, async (req, res) => {
   try {
-    const { productName } = req.body;
+    const { productName, category } = req.body;
     
-    if (!productName) {
+    // Validation
+    if (!productName || productName.trim().length === 0) {
       return res.status(400).json({
+        success: false,
         error: 'Product name is required'
       });
     }
 
-    // Check if already exists
-    const existing = await db.query(
-      'SELECT id FROM products WHERE name = $1',
-      [productName]
-    );
+    const trimmedName = productName.trim();
+    const productCategory = category || 'general';
+
+    console.log(`\n🔨 Building dossier for: "${trimmedName}"`);
+    console.log(`📂 Category: ${productCategory}\n`);
+
+    // Check if already exists and ready (fast path)
+    const existing = await db.query(`
+      SELECT p.id, p.name, p.image_url, d.status, d.overall_score, d.confidence_score, d.last_updated
+      FROM products p
+      LEFT JOIN dossiers d ON p.id = d.product_id
+      WHERE p.name = $1
+    `, [trimmedName]);
     
     if (existing.rows.length > 0) {
-      return res.json({
-        message: 'Product already exists',
-        productId: existing.rows[0].id,
-        success: true
-      });
+      const existingData = existing.rows[0];
+      
+      // If dossier exists and is ready, return it immediately
+      if (existingData.status === 'ready') {
+        console.log(`✅ Product already exists with ready dossier (ID: ${existingData.id})`);
+        
+        return res.json({
+          success: true,
+          message: 'Product already analyzed',
+          productId: existingData.id,
+          productName: existingData.name,
+          cached: true,
+          scores: {
+            overall: existingData.overall_score,
+            confidence: existingData.confidence_score
+          },
+          lastUpdated: existingData.last_updated
+        });
+      }
+      
+      // If building or failed, rebuild it
+      console.log(`⚠️ Product exists but status is: ${existingData.status}. Rebuilding...`);
     }
     
-    // Create product record
-    const product = await db.query(
-      'INSERT INTO products (name, category) VALUES ($1, $2) RETURNING id',
-      [productName, 'electronics']
-    );
+    // Build dossier with SimpleDossierBuilder!
+    // This will:
+    // 1. Check Smart Cache
+    // 2. Scrape Reddit for real reviews
+    // 3. Aggregate data (sentiment, pros/cons, patterns)
+    // 4. Refine with Gemini AI
+    // 5. Fetch images (Universal Image Service)
+    // 6. Calculate scores
+    // 7. Save to DB
+    // 8. Cache result
+    console.log(`🚀 Starting SimpleDossierBuilder...`);
     
-    const productId = product.rows[0].id;
+    const result = await builder.buildDossier(trimmedName, productCategory, true);
     
-    // Create dossier record (building status)
-    await db.query(`
-      INSERT INTO dossiers (product_id, status, next_update_due)
-      VALUES ($1, 'building', NOW() + INTERVAL '1 hour')
-    `, [productId]);
+    if (!result.success) {
+      throw new Error(result.error || 'Build failed');
+    }
     
-    // Create job record
-    const job = await db.query(`
-      INSERT INTO jobs (product_name, status)
-      VALUES ($1, 'waiting')
-      RETURNING id
-    `, [productName]);
+    console.log(`✅ Dossier built successfully!`);
+    console.log(`   - Product ID: ${result.productId}`);
+    console.log(`   - Overall Score: ${result.scores.overall}/100`);
+    console.log(`   - Confidence: ${result.confidence}%`);
+    console.log(`   - From Cache: ${result.fromCache ? 'Yes' : 'No'}`);
+    console.log(`   - Images: ${result.images?.length || 0}\n`);
     
     res.json({
       success: true,
-      message: 'Building dossier...',
-      productId,
-      jobId: job.rows[0].id,
-      estimatedTime: 180 // 3 minutes
+      message: result.fromCache ? 'Retrieved from cache' : 'Dossier built successfully',
+      productId: result.productId,
+      productName: result.productName,
+      scores: result.scores,
+      confidence: result.confidence,
+      summary: result.summary,
+      imageUrl: result.imageUrl,
+      cached: result.fromCache || false,
+      dataSource: result.dataSource,
+      qualityCheck: result.qualityCheck
     });
 
   } catch (error) {
-    console.error('Build product error:', error);
+    console.error('❌ Build product error:', error);
+    
+    // User-friendly error messages
+    let userMessage = 'Failed to build dossier';
+    if (error.message.includes('Reddit')) {
+      userMessage = 'Failed to fetch product reviews';
+    } else if (error.message.includes('AI') || error.message.includes('Gemini')) {
+      userMessage = 'AI analysis failed';
+    } else if (error.message.includes('database') || error.message.includes('DB')) {
+      userMessage = 'Database error';
+    }
+    
     res.status(500).json({
-      error: error.message,
-      success: false
+      success: false,
+      error: userMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

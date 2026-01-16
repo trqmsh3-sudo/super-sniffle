@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 // Smart API URL detection
 const getAPIUrl = () => {
@@ -31,16 +31,21 @@ const ProductSearch = () => {
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const isClassicMode = location.pathname.startsWith('/classic') || location.pathname.startsWith('/search-old');
+  const productBasePath = isClassicMode ? '/classic/product' : '/product';
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const handleSearch = async (searchValue = query) => {
+    const safeQuery = searchValue.trim();
+    if (!safeQuery) return;
     
     setLoading(true);
     setShowResults(true);
     setError(null);
     
     try {
-      const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(safeQuery)}`);
       const data = await response.json();
       
       if (data.success) {
@@ -78,7 +83,7 @@ const ProductSearch = () => {
       
       if (data.success) {
         // Success! Navigate to the product page
-        navigate(`/product/${data.productId}`);
+        navigate(`${productBasePath}/${data.productId}`);
       } else {
         setError(data.error || 'בניית תיק נכשלה');
       }
@@ -89,6 +94,14 @@ const ProductSearch = () => {
       setBuilding(false);
     }
   };
+
+  useEffect(() => {
+    const initialQuery = searchParams.get('q');
+    if (initialQuery) {
+      setQuery(initialQuery);
+      handleSearch(initialQuery);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg-primary">
@@ -208,7 +221,7 @@ const ProductSearch = () => {
                 {results.map((product) => (
                   <div
                     key={product.id}
-                    onClick={() => navigate(`/product/${product.id}`)}
+                    onClick={() => navigate(`${productBasePath}/${product.id}`)}
                     className="bg-white rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition"
                   >
                     <div className="flex justify-between items-start">

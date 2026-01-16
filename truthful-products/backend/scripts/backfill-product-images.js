@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('../loadEnv');
 const db = require('../config/database');
 const productImageService = require('../services/productImageService');
 

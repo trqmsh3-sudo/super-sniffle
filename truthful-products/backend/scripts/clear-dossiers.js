@@ -3,7 +3,7 @@
  * This will allow rebuilding with images for existing products
  */
 
-require('dotenv').config();
+require('../loadEnv');
 const db = require('../config/database');
 
 async function clearDossiers() {

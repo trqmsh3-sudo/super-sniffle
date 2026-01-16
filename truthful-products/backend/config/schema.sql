@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS products (
     category VARCHAR(100),
     asin VARCHAR(50),          -- Amazon ID
     launch_date DATE,
+    image_url TEXT,
+    images JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

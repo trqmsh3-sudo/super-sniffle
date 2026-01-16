@@ -3,7 +3,7 @@
  * This will rebuild dossiers for all existing products using Gemini
  */
 
-require('dotenv').config();
+require('../loadEnv');
 const db = require('../config/database');
 const SimpleDossierBuilder = require('../services/simpleDossierBuilder');
 

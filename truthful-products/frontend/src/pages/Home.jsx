@@ -19,6 +19,7 @@ const Home = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [heroQuery, setHeroQuery] = useState('');
+  const [classicQuery, setClassicQuery] = useState('');
   const [stats, setStats] = useState(null);
   const navigate = useNavigate();
 
@@ -65,112 +66,114 @@ const Home = () => {
       <div className="absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full bg-cyan-200/35 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-24">
-        <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <Logo size="large" />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10 items-start">
+          <div className="lg:pr-6">
+            <div className="text-center lg:text-left">
+              <div className="flex justify-center lg:justify-start mb-6">
+                <Logo size="large" />
+              </div>
 
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-4 py-2 text-sm font-semibold text-mint-800 shadow-card">
-            <Sparkles className="h-4 w-4 text-mint-600" />
-            Real reviews. No marketing BS.
-          </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-4 py-2 text-sm font-semibold text-mint-800 shadow-card">
+                <Sparkles className="h-4 w-4 text-mint-600" />
+                Real reviews. No marketing BS.
+              </div>
 
-          <h1 className="mt-6 text-5xl md:text-6xl font-black tracking-tight text-ink">
-            Bought something you regret?
-            <br />
-            <span className="bg-gradient-to-r from-mint-700 to-cyan-600 bg-clip-text text-transparent">
-              Never again.
-            </span>
-          </h1>
+              <h1 className="mt-6 text-5xl md:text-6xl font-black tracking-tight text-ink">
+                Bought something you regret?
+                <br />
+                <span className="bg-gradient-to-r from-mint-700 to-cyan-600 bg-clip-text text-transparent">
+                  Never again.
+                </span>
+              </h1>
 
-          <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
-            Get the truth about any product in <span className="font-semibold text-ink">60 seconds</span> —
-            from real reviews and discussions, not ads.
-          </p>
+              <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto lg:mx-0">
+                Get the truth about any product in <span className="font-semibold text-ink">60 seconds</span> —
+                from real reviews and discussions, not ads.
+              </p>
 
-          {/* Hero search (direct, aggressive CTA) */}
-          <div className="mt-10 max-w-3xl mx-auto">
-            <Card className="p-4 md:p-5">
-              <div className="flex flex-col md:flex-row gap-3 items-stretch">
-                <div className="flex-1">
-                  <label className="block">
-                    <div className="relative flex items-center rounded-2xl border-2 border-border bg-surface px-4 transition-all duration-200 focus-within:border-mint-500 focus-within:ring-4 focus-within:ring-[color:var(--ring)]">
-                      <div className="mr-3 text-mint-600">
-                        <Search className="h-5 w-5" />
-                      </div>
-                      <input
-                        value={heroQuery}
-                        onChange={(e) => setHeroQuery(e.target.value)}
-                        placeholder="Search any product… (e.g., iPhone 15, Dyson V15)"
-                        className="h-12 w-full bg-transparent text-ink placeholder:text-slate-400 focus:outline-none"
-                        onKeyDown={(e) => e.key === 'Enter' && navigate(`/search?q=${encodeURIComponent(heroQuery)}`)}
-                      />
+              {/* Hero search (direct, aggressive CTA) */}
+              <div className="mt-10 max-w-3xl mx-auto lg:mx-0">
+                <Card className="p-4 md:p-5">
+                  <div className="flex flex-col md:flex-row gap-3 items-stretch">
+                    <div className="flex-1">
+                      <label className="block">
+                        <div className="relative flex items-center rounded-2xl border-2 border-border bg-surface px-4 transition-all duration-200 focus-within:border-mint-500 focus-within:ring-4 focus-within:ring-[color:var(--ring)]">
+                          <div className="mr-3 text-mint-600">
+                            <Search className="h-5 w-5" />
+                          </div>
+                          <input
+                            value={heroQuery}
+                            onChange={(e) => setHeroQuery(e.target.value)}
+                            placeholder="Search any product… (e.g., iPhone 15, Dyson V15)"
+                            className="h-12 w-full bg-transparent text-ink placeholder:text-slate-400 focus:outline-none"
+                            onKeyDown={(e) => e.key === 'Enter' && navigate(`/search?q=${encodeURIComponent(heroQuery)}`)}
+                          />
+                        </div>
+                      </label>
                     </div>
-                  </label>
-                </div>
-                <Button
-                  size="lg"
-                  className="md:w-48"
-                  leftIcon={<Sparkles className="h-5 w-5" />}
-                  onClick={() => navigate(`/search?q=${encodeURIComponent(heroQuery)}`)}
-                >
-                  Analyze
-                </Button>
+                    <Button
+                      size="lg"
+                      className="md:w-48"
+                      leftIcon={<Sparkles className="h-5 w-5" />}
+                      onClick={() => navigate(`/search?q=${encodeURIComponent(heroQuery)}`)}
+                    >
+                      Analyze
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2 justify-center lg:justify-start">
+                    <span className="text-sm text-slate-500 mr-2">Popular:</span>
+                    {popular.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => navigate(`/search?q=${encodeURIComponent(q)}`)}
+                        className="text-sm font-semibold text-mint-800 bg-mint-50 border border-mint-100 rounded-full px-3 py-1 hover:bg-mint-100 transition-colors"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </Card>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                <span className="text-sm text-slate-500 mr-2">Popular:</span>
-                {popular.map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => navigate(`/search?q=${encodeURIComponent(q)}`)}
-                    className="text-sm font-semibold text-mint-800 bg-mint-50 border border-mint-100 rounded-full px-3 py-1 hover:bg-mint-100 transition-colors"
-                  >
-                    {q}
-                  </button>
-                ))}
+              {/* Social proof */}
+              <div className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-slate-600">
+                <span className="font-semibold text-ink">
+                  {stats?.products_analyzed != null ? `${stats.products_analyzed.toLocaleString()} products analyzed` : 'Products analyzed: updating…'}
+                </span>
+                <span className="text-slate-400">•</span>
+                <span className="font-semibold text-ink">
+                  {stats?.dossiers_ready != null ? `${stats.dossiers_ready.toLocaleString()} dossiers ready` : 'Dossiers ready: updating…'}
+                </span>
+                <span className="text-slate-400">•</span>
+                <span className="italic">“Saved me from buying a lemon.”</span>
               </div>
-            </Card>
-          </div>
+            </div>
 
-          {/* Social proof */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-600">
-            <span className="font-semibold text-ink">
-              {stats?.products_analyzed != null ? `${stats.products_analyzed.toLocaleString()} products analyzed` : 'Products analyzed: updating…'}
-            </span>
-            <span className="text-slate-400">•</span>
-            <span className="font-semibold text-ink">
-              {stats?.dossiers_ready != null ? `${stats.dossiers_ready.toLocaleString()} dossiers ready` : 'Dossiers ready: updating…'}
-            </span>
-            <span className="text-slate-400">•</span>
-            <span className="italic">“Saved me from buying a lemon.”</span>
-          </div>
-        </div>
+            <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6">
+                <div className="text-3xl mb-4">🧠</div>
+                <h3 className="text-lg font-bold text-ink mb-2">Honest by design</h3>
+                <p className="text-slate-600 text-sm">We surface both pros and cons, with confidence and sources.</p>
+              </Card>
+              <Card className="p-6">
+                <div className="text-3xl mb-4">⚡</div>
+                <h3 className="text-lg font-bold text-ink mb-2">Fast results</h3>
+                <p className="text-slate-600 text-sm">Caching + smooth loading states for a “butter” experience.</p>
+              </Card>
+              <Card className="p-6">
+                <div className="text-3xl mb-4">🛡️</div>
+                <h3 className="text-lg font-bold text-ink mb-2">Confidence scoring</h3>
+                <p className="text-slate-600 text-sm">Know when data is strong and when it’s still early.</p>
+              </Card>
+            </div>
 
-        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6">
-            <div className="text-3xl mb-4">🧠</div>
-            <h3 className="text-lg font-bold text-ink mb-2">Honest by design</h3>
-            <p className="text-slate-600 text-sm">We surface both pros and cons, with confidence and sources.</p>
-          </Card>
-          <Card className="p-6">
-            <div className="text-3xl mb-4">⚡</div>
-            <h3 className="text-lg font-bold text-ink mb-2">Fast results</h3>
-            <p className="text-slate-600 text-sm">Caching + smooth loading states for a “butter” experience.</p>
-          </Card>
-          <Card className="p-6">
-            <div className="text-3xl mb-4">🛡️</div>
-            <h3 className="text-lg font-bold text-ink mb-2">Confidence scoring</h3>
-            <p className="text-slate-600 text-sm">Know when data is strong and when it’s still early.</p>
-          </Card>
-        </div>
-
-        <div className="mt-14">
-          <Card className="p-8">
-            <h2 className="text-2xl font-black text-ink mb-2">Get Early Access</h2>
-            <p className="text-slate-600 mb-6">
-              Join the waitlist — we’ll email you when it’s ready.
-            </p>
+            <div className="mt-14">
+              <Card className="p-8">
+                <h2 className="text-2xl font-black text-ink mb-2">Get Early Access</h2>
+                <p className="text-slate-600 mb-6">
+                  Join the waitlist — we’ll email you when it’s ready.
+                </p>
 
           {!submitted ? (
             <form 
@@ -205,16 +208,59 @@ const Home = () => {
             </div>
           )}
           </Card>
-        </div>
+            </div>
 
-        {/* כפתור סודי לכניסת מנהל */}
-        <button
-          onClick={() => navigate('/admin-login')}
-          className="fixed bottom-4 left-4 p-2 bg-white/70 hover:bg-white rounded-full transition-all duration-200 opacity-40 hover:opacity-100 hover:scale-105 border border-border shadow-card"
-          title="Admin Login"
-        >
-          <Lock size={20} className="text-slate-700" />
-        </button>
+            {/* כפתור סודי לכניסת מנהל */}
+            <button
+              onClick={() => navigate('/admin-login')}
+              className="fixed bottom-4 left-4 p-2 bg-white/70 hover:bg-white rounded-full transition-all duration-200 opacity-40 hover:opacity-100 hover:scale-105 border border-border shadow-card"
+              title="Admin Login"
+            >
+              <Lock size={20} className="text-slate-700" />
+            </button>
+          </div>
+
+          <div className="lg:sticky lg:top-24">
+            <Card className="p-6 bg-white/90">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Classic Mode</div>
+              <h3 className="mt-2 text-xl font-bold text-ink">הגרסה הישנה — בצד</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                רוצה את החיפוש הקלאסי? אפשר לגשת אליו מייד בלי לאבד את החוויה החדשה.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                <label className="text-sm font-semibold text-slate-700">Classic search</label>
+                <input
+                  value={classicQuery}
+                  onChange={(e) => setClassicQuery(e.target.value)}
+                  placeholder="חפש מוצר (Classic)"
+                  className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm focus:outline-none focus:ring-4 focus:ring-[color:var(--ring)]"
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/classic?q=${encodeURIComponent(classicQuery)}`)}
+                />
+                <Button
+                  size="sm"
+                  className="w-full"
+                  leftIcon={<Search className="h-4 w-4" />}
+                  onClick={() => navigate(`/classic?q=${encodeURIComponent(classicQuery)}`)}
+                >
+                  Open Classic Search
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => navigate('/classic')}
+                >
+                  Open Classic Home
+                </Button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-border bg-surface px-4 py-3 text-xs text-slate-500">
+                Tip: classic results open with `/classic?q=...`
+              </div>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

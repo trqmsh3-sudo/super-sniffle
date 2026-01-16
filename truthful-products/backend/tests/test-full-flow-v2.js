@@ -5,7 +5,7 @@
  * Usage: node tests/test-full-flow-v2.js [productName]
  */
 
-require('dotenv').config({ path: '../.env' });
+require('../loadEnv');
 const SimpleDossierBuilder = require('../services/simpleDossierBuilder');
 
 async function testFullFlowV2(productName = 'JBL Flip 6', category = 'speakers') {

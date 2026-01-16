@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./loadEnv');
 const DataCollector = require('./services/dataCollector');
 
 async function test() {

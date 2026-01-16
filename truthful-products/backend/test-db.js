@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./loadEnv');
 const db = require('./config/database');
 
 async function testConnection() {
@@ -31,12 +31,10 @@ async function testConnection() {
     console.log('Test 3: Counting records...');
     const productCount = await db.query('SELECT COUNT(*) FROM products');
     const dossierCount = await db.query('SELECT COUNT(*) FROM dossiers');
-    const reviewCount = await db.query('SELECT COUNT(*) FROM reviews');
     
     console.log(`✅ Current data:`);
     console.log(`   - Products: ${productCount.rows[0].count}`);
     console.log(`   - Dossiers: ${dossierCount.rows[0].count}`);
-    console.log(`   - Reviews: ${reviewCount.rows[0].count}`);
     console.log('');
 
     console.log('🎉 All tests passed!\n');

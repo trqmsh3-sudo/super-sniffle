@@ -1,5 +1,5 @@
-require('dotenv').config();
-const DossierBuilder = require('./services/dossierBuilder');
+require('./loadEnv');
+const DossierBuilder = require('./services/simpleDossierBuilder');
 
 async function test() {
   console.log('\n🧪 Testing Dossier Builder\n');

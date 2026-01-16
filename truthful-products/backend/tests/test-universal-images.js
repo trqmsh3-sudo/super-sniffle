@@ -4,7 +4,7 @@
  * Usage: node tests/test-universal-images.js [productName]
  */
 
-require('dotenv').config({ path: '../.env' });
+require('../loadEnv');
 const universalImageService = require('../services/universalImageService');
 
 async function testUniversalImages(productName = 'iPhone 15') {
