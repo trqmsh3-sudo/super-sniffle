@@ -4,8 +4,8 @@ const { Pool } = require('pg');
 const poolConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
-      // Render/managed Postgres commonly requires SSL; disable cert verification for managed envs
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      // Render/managed Postgres requires SSL in production
+      ssl: { rejectUnauthorized: false },
     }
   : {
       user: process.env.DB_USER || 'postgres',
@@ -19,7 +19,10 @@ const pool = new Pool({
   ...poolConfig,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000, // Quick fail if DB not available
+  query_timeout: 30000,
+  statement_timeout: 30000,
+  allowExitOnIdle: true, // Allow process to exit when idle
 });
 
 // Test connection
@@ -27,11 +30,26 @@ pool.on('connect', () => {
   console.log('🔌 Connected to PostgreSQL database');
 });
 
-pool.on('error', (err) => {
-  console.error('❌ PostgreSQL connection error:', err);
+// Gracefully handle connection failures
+pool.on('error', (err, client) => {
+  console.error('⚠️  PostgreSQL connection error:', err.message);
+  // Don't crash - allow app to continue in degraded mode
 });
 
+// Wrap query to handle errors gracefully
+const safeQuery = async (text, params) => {
+  try {
+    return await pool.query(text, params);
+  } catch (error) {
+    // Log error but don't crash - allow degraded mode
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      console.warn('⚠️  Database connection unavailable:', error.message);
+    }
+    throw error; // Re-throw so routes can handle it
+  }
+};
+
 module.exports = {
-  query: (text, params) => pool.query(text, params),
+  query: safeQuery,
   pool
 };

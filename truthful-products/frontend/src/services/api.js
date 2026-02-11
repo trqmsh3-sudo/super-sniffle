@@ -2,21 +2,21 @@ import axios from 'axios';
 
 // Smart API URL detection
 const getAPIUrl = () => {
-  // If explicitly set in env, use it
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
+  // 1. Priority: Environment variable
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   
-  // Auto-detect based on hostname
+  // 2. Production detection
   const hostname = window.location.hostname;
-  if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com') {
-    return 'https://clearpick-ai.onrender.com/api';
-  }
-  if (hostname.includes('vercel.app')) {
-    return 'https://clearpick-ai.onrender.com/api';
+  const isProduction = hostname === 'www.clearpickai.com' || 
+                       hostname === 'clearpickai.com' || 
+                       hostname.includes('netlify.app') || 
+                       hostname.includes('vercel.app');
+
+  if (isProduction) {
+    return 'https://10w0d94b94.onrender.com/api';
   }
   
-  // Default to localhost for development
+  // 3. Fallback to localhost for development
   return 'http://localhost:3000/api';
 };
 

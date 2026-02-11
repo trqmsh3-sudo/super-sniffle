@@ -16,14 +16,14 @@ const getAPIUrl = () => {
   // Auto-detect based on hostname
   const hostname = window.location.hostname;
   if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com') {
-    return 'https://clearpick-ai.onrender.com/api';
+    return 'https://10w0d94b94.onrender.com/api';
   }
   if (hostname.includes('vercel.app')) {
-    return 'https://clearpick-ai.onrender.com/api';
+    return 'https://10w0d94b94.onrender.com/api';
   }
   
   // Default to localhost for development
-  return 'http://localhost:5000/api';
+  return 'http://localhost:3000/api';
 };
 
 const API_URL = getAPIUrl();

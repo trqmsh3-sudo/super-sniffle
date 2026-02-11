@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Mail, CheckCircle, Lock, Sparkles, ArrowRight, Search } from 'lucide-react';
+import { Mail, CheckCircle, Sparkles, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/common/Logo';
 import { Button, Card } from '../components/ui';
 
-// Smart API URL detection (keep in sync with SearchPagePremium)
+// Smart API URL detection (keep in sync with SearchPagePremium and api.js)
 const getAPIUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   const hostname = window.location.hostname;
-  if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com' || hostname.includes('vercel.app')) {
-    return 'https://clearpick-ai.onrender.com/api';
+  if (hostname === 'www.clearpickai.com' || hostname === 'clearpickai.com' || hostname.includes('vercel.app') || hostname.includes('netlify.app')) {
+    return 'https://10w0d94b94.onrender.com/api';
   }
-  return 'http://localhost:5000/api';
+  return 'http://localhost:3000/api';
 };
 const API_URL = getAPIUrl();
 
@@ -19,7 +19,6 @@ const Home = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [heroQuery, setHeroQuery] = useState('');
-  const [classicQuery, setClassicQuery] = useState('');
   const [stats, setStats] = useState(null);
   const navigate = useNavigate();
 
@@ -66,10 +65,10 @@ const Home = () => {
       <div className="absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full bg-cyan-200/35 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl px-4 py-16 md:py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10 items-start">
-          <div className="lg:pr-6">
-            <div className="text-center lg:text-left">
-              <div className="flex justify-center lg:justify-start mb-6">
+        <div className="max-w-4xl mx-auto">
+          <div>
+            <div className="text-center">
+              <div className="flex justify-center mb-6">
                 <Logo size="large" />
               </div>
 
@@ -86,13 +85,13 @@ const Home = () => {
                 </span>
               </h1>
 
-              <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto lg:mx-0">
+              <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
                 Get the truth about any product in <span className="font-semibold text-ink">60 seconds</span> —
                 from real reviews and discussions, not ads.
               </p>
 
               {/* Hero search (direct, aggressive CTA) */}
-              <div className="mt-10 max-w-3xl mx-auto lg:mx-0">
+              <div className="mt-10 max-w-3xl mx-auto">
                 <Card className="p-4 md:p-5">
                   <div className="flex flex-col md:flex-row gap-3 items-stretch">
                     <div className="flex-1">
@@ -121,7 +120,7 @@ const Home = () => {
                     </Button>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2 justify-center lg:justify-start">
+                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
                     <span className="text-sm text-slate-500 mr-2">Popular:</span>
                     {popular.map((q) => (
                       <button
@@ -137,7 +136,7 @@ const Home = () => {
               </div>
 
               {/* Social proof */}
-              <div className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-slate-600">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-600">
                 <span className="font-semibold text-ink">
                   {stats?.products_analyzed != null ? `${stats.products_analyzed.toLocaleString()} products analyzed` : 'Products analyzed: updating…'}
                 </span>
@@ -159,12 +158,12 @@ const Home = () => {
               <Card className="p-6">
                 <div className="text-3xl mb-4">⚡</div>
                 <h3 className="text-lg font-bold text-ink mb-2">Fast results</h3>
-                <p className="text-slate-600 text-sm">Caching + smooth loading states for a “butter” experience.</p>
+                <p className="text-slate-600 text-sm">Caching + smooth loading states for a "butter" experience.</p>
               </Card>
               <Card className="p-6">
                 <div className="text-3xl mb-4">🛡️</div>
                 <h3 className="text-lg font-bold text-ink mb-2">Confidence scoring</h3>
-                <p className="text-slate-600 text-sm">Know when data is strong and when it’s still early.</p>
+                <p className="text-slate-600 text-sm">Know when data is strong and when it's still early.</p>
               </Card>
             </div>
 
@@ -210,55 +209,6 @@ const Home = () => {
           </Card>
             </div>
 
-            {/* כפתור סודי לכניסת מנהל */}
-            <button
-              onClick={() => navigate('/admin-login')}
-              className="fixed bottom-4 left-4 p-2 bg-white/70 hover:bg-white rounded-full transition-all duration-200 opacity-40 hover:opacity-100 hover:scale-105 border border-border shadow-card"
-              title="Admin Login"
-            >
-              <Lock size={20} className="text-slate-700" />
-            </button>
-          </div>
-
-          <div className="lg:sticky lg:top-24">
-            <Card className="p-6 bg-white/90">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Classic Mode</div>
-              <h3 className="mt-2 text-xl font-bold text-ink">הגרסה הישנה — בצד</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                רוצה את החיפוש הקלאסי? אפשר לגשת אליו מייד בלי לאבד את החוויה החדשה.
-              </p>
-
-              <div className="mt-4 space-y-3">
-                <label className="text-sm font-semibold text-slate-700">Classic search</label>
-                <input
-                  value={classicQuery}
-                  onChange={(e) => setClassicQuery(e.target.value)}
-                  placeholder="חפש מוצר (Classic)"
-                  className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm focus:outline-none focus:ring-4 focus:ring-[color:var(--ring)]"
-                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/classic?q=${encodeURIComponent(classicQuery)}`)}
-                />
-                <Button
-                  size="sm"
-                  className="w-full"
-                  leftIcon={<Search className="h-4 w-4" />}
-                  onClick={() => navigate(`/classic?q=${encodeURIComponent(classicQuery)}`)}
-                >
-                  Open Classic Search
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => navigate('/classic')}
-                >
-                  Open Classic Home
-                </Button>
-              </div>
-
-              <div className="mt-4 rounded-xl border border-border bg-surface px-4 py-3 text-xs text-slate-500">
-                Tip: classic results open with `/classic?q=...`
-              </div>
-            </Card>
           </div>
         </div>
       </div>

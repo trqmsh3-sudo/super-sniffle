@@ -19,12 +19,6 @@ const Header = () => {
             <Link to="/search" className="text-slate-700 hover:text-mint-700 font-medium transition-colors">
               Search
             </Link>
-            <Link to="/classic" className="text-slate-700 hover:text-mint-700 font-medium transition-colors">
-              Classic
-            </Link>
-            <Link to="/product-intel" className="text-slate-700 hover:text-mint-700 font-medium transition-colors">
-              Product Intelligence
-            </Link>
             <Link to="/about" className="text-slate-700 hover:text-mint-700 font-medium transition-colors">
               About
             </Link>

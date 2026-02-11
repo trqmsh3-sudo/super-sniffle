@@ -1,5 +1,4 @@
 const axios = require('axios');
-const googleShoppingService = require('./googleShoppingService');
 
 /**
  * Product Image Service
@@ -388,22 +387,6 @@ class ProductImageService {
         }
       } catch (e) {
         console.warn(`⚠️ Wikipedia image failed: ${e?.message || e}`);
-      }
-    }
-
-    // 3) Google Custom Search (if configured and not rate limited)
-    if (images.length < maxImages && process.env.GOOGLE_SHOPPING_API_KEY) {
-      try {
-        const googleImg = await googleShoppingService.getProductImage(name);
-        if (googleImg && !images.some(img => img.url === googleImg)) {
-          images.push({
-            url: googleImg,
-            source: 'google',
-            type: 'additional'
-          });
-        }
-      } catch (e) {
-        console.warn(`⚠️ Google image failed: ${e?.message || e}`);
       }
     }
 

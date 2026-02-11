@@ -186,8 +186,11 @@ app.get('/', (req, res) => {
 
 app.get('/api/health', async (req, res) => {
   try {
-    // Test database connection (fast fail). Even if DB is down, keep endpoint responsive.
-    await db.query('SELECT NOW()');
+    // Test database connection with a timeout
+    const dbTest = await Promise.race([
+      db.query('SELECT NOW()'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Database timeout')), 3000))
+    ]);
     
     res.json({
       success: true,
@@ -196,19 +199,18 @@ app.get('/api/health', async (req, res) => {
       uptime: process.uptime(),
       services: {
         database: '✅ Connected',
-        gemini: process.env.GEMINI_API_KEY ? '✅ Ready (Expert Analysis)' : '❌ No API Key',
-        expert_analysis: '✅ Active',
-        product_images: '✅ Active'
+        gemini: process.env.GEMINI_API_KEY ? '✅ Ready' : '❌ No API Key'
       }
     });
   } catch (error) {
-    // Don't hard-fail health just because DB is down; keep it useful for waking Render.
+    console.error('Health check failed:', error.message);
     res.status(200).json({
       success: true,
       status: 'degraded',
+      error_code: error.code || 'TIMEOUT',
       timestamp: new Date().toISOString(),
       services: {
-        database: '❌ ' + (error?.message || 'Database unavailable')
+        database: `❌ ${error.message}`
       }
     });
   }
