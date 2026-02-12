@@ -211,7 +211,10 @@ const SearchPagePremium = () => {
                 <div className="flex flex-col md:flex-row gap-3 items-stretch">
                   <Input
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      if (error) setError(null);
+                    }}
                     placeholder="Search any product… (e.g., iPhone 15 Pro, Sony headphones)"
                     leftIcon={<Search className="h-5 w-5" />}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
