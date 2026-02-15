@@ -245,9 +245,9 @@ const SearchPagePremium = () => {
         // Success!
         toast.success('✅ ניתוח הושלם בהצלחה!');
         
-        // Navigate to dossier page
+        // Navigate to dossier page (standard product route)
         setTimeout(() => {
-          navigate(`/dossier/${result.productId}`);
+          navigate(`/product/${result.productId}`);
         }, 500);
       } else {
         toast.error(result.error || 'שגיאה בבניית התיק');
