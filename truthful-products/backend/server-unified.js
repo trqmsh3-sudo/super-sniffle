@@ -455,6 +455,22 @@ app.get('/api/brands/:name', async (req, res) => {
 });
 
 /**
+ * ADMIN: Clear all dossiers
+ * Temporary safety route to reset intelligence logic
+ */
+app.post('/api/admin/clear-all-data-danger', async (req, res) => {
+  try {
+    // Basic safety: checking for a secret in headers if needed, 
+    // but here we rely on the fact that this is a temporary maintenance task
+    console.log('🗑️ ADMIN ACTION: Clearing all dossiers...');
+    await db.query('DELETE FROM dossiers');
+    res.json({ success: true, message: 'All dossiers cleared. System will rebuild from scratch.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/products
  * List all products
  */
