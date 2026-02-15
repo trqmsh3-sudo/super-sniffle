@@ -3,7 +3,6 @@ import { lazy, Suspense } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-import Home from './pages/Home';
 
 // Lazy loaded pages
 const AboutUs = lazy(() => import('./pages/AboutUs'));
@@ -29,9 +28,12 @@ function AppContent() {
       <Header />
       <main className="flex-grow">
         <Routes>
-          <Route path="/" element={<Home />} />
-          
-          {/* Core Product Intelligence */}
+          {/* Home and Search are the same unified page */}
+          <Route path="/" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <SearchPagePremium />
+            </Suspense>
+          } />
           <Route path="/search" element={
             <Suspense fallback={<LoadingSpinner />}>
               <SearchPagePremium />
