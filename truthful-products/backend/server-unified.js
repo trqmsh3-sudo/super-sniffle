@@ -360,9 +360,7 @@ app.get('/api/search', async (req, res) => {
 
     if (needsDisambiguation) {
       // Brand/category disambiguation suggestions (fast, no DB scan)
-      addSuggestionsUnique(productValidator.buildIphoneVariantSuggestions(queryText));
-      addSuggestionsUnique(productValidator.buildIphoneFamilySuggestions(queryText));
-      addSuggestionsUnique(productValidator.getBrandSuggestions(productValidator.normalizeForCompare(queryText)));
+      addSuggestionsUnique(productValidator.buildSuggestions(queryText, querySpec));
     }
 
     if (products.length === 0) {
