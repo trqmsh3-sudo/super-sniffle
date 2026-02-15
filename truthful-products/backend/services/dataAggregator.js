@@ -456,26 +456,48 @@ class DataAggregator {
     if (reviews.length === 0) {
       return this.emptyFallback(productName);
     }
+
+    // 0. Post-scrape relevance filter — drop posts that don't mention the product
+    const nameLower = productName.toLowerCase();
+    const nameWords = nameLower.split(/\s+/).filter(Boolean);
+    const brand = nameWords[0] || '';
+    
+    const relevantReviews = reviews.filter(r => {
+      const text = ((r.title || '') + ' ' + (r.content || '')).toLowerCase();
+      // Must contain the full product name OR brand + majority of model words
+      if (text.includes(nameLower)) return true;
+      if (brand && text.includes(brand)) {
+        const modelWords = nameWords.slice(1);
+        if (modelWords.length === 0) return true;
+        const matched = modelWords.filter(w => text.includes(w)).length;
+        return matched >= Math.ceil(modelWords.length * 0.6);
+      }
+      return false;
+    });
+
+    console.log(`   🔍 Relevance filter: ${relevantReviews.length}/${reviews.length} posts are about "${productName}"`);
+    
+    const finalReviews = relevantReviews.length > 0 ? relevantReviews : reviews.slice(0, 3);
     
     // 1. Sentiment Analysis
     console.log('   ⚙️ Analyzing sentiment...');
-    const sentimentAnalysis = this.analyzeSentiments(reviews);
+    const sentimentAnalysis = this.analyzeSentiments(finalReviews);
     
     // 2. Pattern Detection
     console.log('   ⚙️ Detecting patterns...');
-    const patterns = this.detectPatterns(reviews);
+    const patterns = this.detectPatterns(finalReviews);
     
     // 3. Pros & Cons
     console.log('   ⚙️ Extracting pros and cons...');
-    const pros = this.extractPros(reviews, sentimentAnalysis);
-    const cons = this.extractCons(reviews, sentimentAnalysis);
+    const pros = this.extractPros(finalReviews, sentimentAnalysis);
+    const cons = this.extractCons(finalReviews, sentimentAnalysis);
     
     // 4. Common Issues
     console.log('   ⚙️ Extracting common issues...');
-    const commonIssues = this.extractCommonIssues(reviews);
+    const commonIssues = this.extractCommonIssues(finalReviews);
     
     // 5. Summary
-    const summary = this.generateSummary(productName, sentimentAnalysis, reviews.length);
+    const summary = this.generateSummary(productName, sentimentAnalysis, finalReviews.length);
     
     console.log(`✅ Data Aggregator: Analysis complete!`);
     console.log(`   - Sentiment: ${sentimentAnalysis.percentPositive}% positive, ${sentimentAnalysis.percentNegative}% negative`);
@@ -486,11 +508,11 @@ class DataAggregator {
     
     return {
       productName,
-      totalReviews: reviews.length,
+      totalReviews: finalReviews.length,
       sources: {
-        reddit: reviews.filter(r => r.source === 'reddit').length,
-        youtube: reviews.filter(r => r.source === 'youtube').length,
-        amazon: reviews.filter(r => r.source === 'amazon').length
+        reddit: finalReviews.filter(r => r.source === 'reddit').length,
+        youtube: finalReviews.filter(r => r.source === 'youtube').length,
+        amazon: finalReviews.filter(r => r.source === 'amazon').length
       },
       sentiment: sentimentAnalysis,
       patterns,
@@ -498,8 +520,8 @@ class DataAggregator {
       cons,
       commonIssues,
       summary,
-      confidence: this.calculateConfidence(reviews, sentimentAnalysis),
-      rawReviews: reviews  // שמירת הביקורות המקוריות
+      confidence: this.calculateConfidence(finalReviews, sentimentAnalysis),
+      rawReviews: finalReviews  // שמירת הביקורות המקוריות
     };
   }
 

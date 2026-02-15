@@ -107,24 +107,43 @@ class RedditScraper {
   }
 
   /**
-   * סינון פוסטים רלוונטיים
+   * סינון פוסטים רלוונטיים — V2.0
+   * Keep model numbers! "JBL Flip 6" must match all 3 words, not just "jbl" + "flip"
    */
   filterRelevantPosts(posts, productName) {
-    const productWords = productName.toLowerCase().split(' ').filter(w => w.length > 2);
+    const nameLower = productName.toLowerCase().trim();
+    // Keep ALL words including short ones (model numbers like "6", "S24", "X5")
+    const productWords = nameLower.split(/\s+/).filter(Boolean);
+    // Brand is typically the first word
+    const brand = productWords[0] || '';
+    // The rest is the model identifier
+    const modelWords = productWords.slice(1);
     
     return posts.filter(post => {
       const data = post.data;
       
-      // סינון בסיסי
-      if (!data.selftext || data.selftext.length < 50) return false;  // תוכן קצר מדי
-      if (data.score < 2) return false;  // ציון נמוך מדי
-      if (data.author === '[deleted]') return false;  // משתמש נמחק
+      // Basic filters
+      if (!data.selftext || data.selftext.length < 50) return false;
+      if (data.score < 2) return false;
+      if (data.author === '[deleted]') return false;
       
-      // בדיקת רלוונטיות
       const textToCheck = (data.title + ' ' + data.selftext).toLowerCase();
-      const matchCount = productWords.filter(word => textToCheck.includes(word)).length;
       
-      return matchCount >= Math.min(2, productWords.length);  // לפחות 2 מילים או כל המילים אם יש פחות
+      // BEST: Exact product name appears as a phrase (e.g. "jbl flip 6")
+      if (textToCheck.includes(nameLower)) return true;
+      
+      // GOOD: All product words appear somewhere in the text
+      const allMatch = productWords.every(word => textToCheck.includes(word));
+      if (allMatch) return true;
+      
+      // ACCEPTABLE: Brand matches + most model words match (handles minor variations)
+      if (brand && textToCheck.includes(brand) && modelWords.length > 0) {
+        const modelMatchCount = modelWords.filter(w => textToCheck.includes(w)).length;
+        if (modelMatchCount >= Math.ceil(modelWords.length * 0.7)) return true;
+      }
+      
+      // REJECT everything else — no partial/random matches
+      return false;
     });
   }
 
@@ -133,23 +152,31 @@ class RedditScraper {
    */
   calculateRelevance(post, productName) {
     const data = post.data;
-    const productWords = productName.toLowerCase().split(' ');
+    const nameLower = productName.toLowerCase().trim();
+    const productWords = nameLower.split(/\s+/).filter(Boolean);
     const text = (data.title + ' ' + data.selftext).toLowerCase();
     
     let score = 0;
     
-    // רלוונטיות טקסט (0-50 נקודות)
+    // Exact name match bonus (huge) — post is definitely about this product
+    if (text.includes(nameLower)) {
+      score += 40;
+    }
+    
+    // Title match bonus — if product name is in the title, it's very relevant
+    if (data.title.toLowerCase().includes(nameLower)) {
+      score += 25;
+    }
+    
+    // Word-level match (0-20 points)
     const matchCount = productWords.filter(word => text.includes(word)).length;
-    score += (matchCount / productWords.length) * 50;
+    score += (matchCount / productWords.length) * 20;
     
-    // Upvotes (0-30 נקודות)
-    score += Math.min(30, data.score / 10);
+    // Upvotes (0-10 נקודות)
+    score += Math.min(10, data.score / 10);
     
-    // תגובות (0-10 נקודות) - הרבה תגובות = דיון מעניין
-    score += Math.min(10, data.num_comments / 5);
-    
-    // Upvote ratio (0-10 נקודות) - ratio גבוה = תוכן איכותי
-    score += data.upvote_ratio * 10;
+    // Comments (0-5 נקודות)
+    score += Math.min(5, data.num_comments / 5);
     
     return Math.round(score);
   }
