@@ -14,6 +14,7 @@ const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
 // Core Product Intelligence pages
 const SearchPagePremium = lazy(() => import('./pages/SearchPagePremium'));
 const DossierPagePremium = lazy(() => import('./pages/DossierPagePremium'));
+const ReportPage = lazy(() => import('./pages/ReportPage'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -42,6 +43,11 @@ function AppContent() {
           <Route path="/product/:productId" element={
             <Suspense fallback={<LoadingSpinner />}>
               <DossierPagePremium />
+            </Suspense>
+          } />
+          <Route path="/report/:id" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <ReportPage />
             </Suspense>
           } />
           
