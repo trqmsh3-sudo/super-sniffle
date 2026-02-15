@@ -74,7 +74,7 @@ class DataAggregator {
   }
 
   /**
-   * ניתוח sentiment של טקסט בודד
+   * ניתוח sentiment של טקסט בודד (with negation handling)
    */
   analyzeSentiment(text) {
     if (!text || typeof text !== 'string') return 0;
@@ -82,16 +82,53 @@ class DataAggregator {
     const lowerText = text.toLowerCase();
     const words = lowerText.split(/\s+/);
     
+    // Negation words that flip the sentiment of the next word
+    const negators = new Set(['not', "don't", 'dont', "doesn't", 'doesnt', "isn't", 'isnt',
+      "wasn't", 'wasnt', "aren't", 'arent', "won't", 'wont', "can't", 'cant',
+      "wouldn't", 'wouldnt', "shouldn't", 'shouldnt', 'never', 'no', 'neither', 'nor', 'hardly', 'barely']);
+    
+    // Phrase-level sentiment (checked first)
+    const positivePhrasesMap = [
+      ['game changer', 2], ['worth every penny', 2], ['highly recommend', 2],
+      ['must have', 1.5], ['must buy', 1.5], ['no complaints', 1.5],
+      ['works perfectly', 1.5], ['exceeded expectations', 2], ['pleasant surprise', 1.5],
+      ['well worth', 1.5], ['love it', 1.5], ['absolutely love', 2],
+    ];
+    
+    const negativePhrasesMap = [
+      ['waste of money', -2], ['total waste', -2], ['do not buy', -2], ["don't buy", -2],
+      ['not worth', -1.5], ['fell apart', -1.5], ['stopped working', -1.5],
+      ['complete garbage', -2], ['huge disappointment', -2], ['buyer beware', -1.5],
+      ['does not work', -1.5], ["doesn't work", -1.5], ['broke after', -1.5],
+      ['returned it', -1], ['asked for refund', -1.5],
+    ];
+    
     let score = 0;
     
-    words.forEach(word => {
-      if (this.positiveWords.includes(word)) score += 1;
-      if (this.negativeWords.includes(word)) score -= 1;
-    });
+    // 1) Phrase matching first
+    for (const [phrase, val] of positivePhrasesMap) {
+      if (lowerText.includes(phrase)) score += val;
+    }
+    for (const [phrase, val] of negativePhrasesMap) {
+      if (lowerText.includes(phrase)) score += val; // val is already negative
+    }
     
-    // נורמליזציה: -1 (שלילי מאוד) עד +1 (חיובי מאוד)
+    // 2) Word-level with negation handling
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      const prevWord = i > 0 ? words[i - 1] : '';
+      const isNegated = negators.has(prevWord);
+      
+      if (this.positiveWords.includes(word)) {
+        score += isNegated ? -0.8 : 1; // "not great" → negative
+      }
+      if (this.negativeWords.includes(word)) {
+        score += isNegated ? 0.5 : -1; // "not bad" → slightly positive
+      }
+    }
+    
+    // נורמליזציה
     const normalized = Math.max(-1, Math.min(1, score / Math.sqrt(words.length)));
-    
     return normalized;
   }
 

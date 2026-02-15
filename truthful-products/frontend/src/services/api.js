@@ -52,6 +52,23 @@ export const buildProduct = async (productName, category = 'general') => {
 };
 
 /**
+ * Build product dossier — raw version that returns full error responses
+ * instead of throwing, so we can handle BRAND_DETECTED, NEEDS_DISAMBIGUATION, etc.
+ */
+export const buildProductRaw = async (productName, category = 'general') => {
+  try {
+    const resp = await fetch(`${API_BASE_URL}/products/build`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productName, category }),
+    });
+    return await resp.json();
+  } catch (err) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+};
+
+/**
  * Get product dossier by ID
  */
 export const getProductDossier = async (productId) => {
@@ -80,6 +97,14 @@ export const searchProduct = async (query) => {
 export const getSuggestions = async (query) => {
   // TODO: Implement suggestions based on popular searches
   throw new Error('Suggestions endpoint is not implemented yet');
+};
+
+/**
+ * Get brand profile (Wikipedia-style)
+ */
+export const getBrandProfile = async (brandName) => {
+  const response = await api.get(`/brands/${encodeURIComponent(brandName)}`);
+  return response.data;
 };
 
 export default api;

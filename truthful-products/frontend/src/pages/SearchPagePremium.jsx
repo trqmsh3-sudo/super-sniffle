@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Sparkles, TrendingUp, Shield, Zap, RefreshCw, CheckCircle, AlertCircle, Wifi, Mail } from 'lucide-react';
 import { Badge, Button, Card, Input, Skeleton } from '../components/ui';
-import { buildProduct } from '../services/api';
+import { buildProduct, buildProductRaw } from '../services/api';
 import { useToast } from '../components/Toast';
 import BuildingAnimation from '../components/BuildingAnimation';
 
@@ -22,6 +22,20 @@ const getAPIUrl = () => {
 };
 
 const API_URL = getAPIUrl();
+
+// Client-side quick validation (catches obvious issues before hitting the API)
+const quickValidate = (input) => {
+  if (!input || typeof input !== 'string') return { valid: false, reason: 'Please enter a product name' };
+  const trimmed = input.trim();
+  if (trimmed.length < 2) return { valid: false, reason: 'Product name is too short (min 2 characters)' };
+  if (trimmed.length > 120) return { valid: false, reason: 'Product name is too long (max 120 characters)' };
+  // Check if mostly random characters (entropy check)
+  const letterRatio = (trimmed.match(/[a-zA-Z\u0590-\u05FF\u0600-\u06FF0-9\s]/g) || []).length / trimmed.length;
+  if (letterRatio < 0.6) return { valid: false, reason: 'That doesn\'t look like a product name' };
+  // Repeating characters
+  if (/(.)\1{4,}/i.test(trimmed)) return { valid: false, reason: 'That doesn\'t look like a product name' };
+  return { valid: true };
+};
 
 // Status badge component for server connection
 const ServerStatusBadge = ({ status, onRetry }) => {
@@ -171,6 +185,13 @@ const SearchPagePremium = () => {
       setError('Please enter a product name to search');
       return;
     }
+
+    // Client-side validation
+    const check = quickValidate(queryToSearch);
+    if (!check.valid) {
+      setError(check.reason);
+      return;
+    }
     
     setLoading(true);
     setShowResults(true);
@@ -232,14 +253,40 @@ const SearchPagePremium = () => {
       toast.error('אנא הכנס שם מוצר');
       return;
     }
+
+    // Client-side validation
+    const check = quickValidate(query);
+    if (!check.valid) {
+      toast.error(check.reason);
+      return;
+    }
     
     setBuilding(true);
     setBuildingProduct(query);
     setError(null);
     
     try {
-      // Show building animation and call SimpleDossierBuilder
-      const result = await buildProduct(query, 'general');
+      // Use raw API to get full response including error codes
+      const result = await buildProductRaw(query, 'general');
+      
+      // Brand detected → redirect to brand page
+      if (result.code === 'BRAND_DETECTED') {
+        setBuilding(false);
+        const brandName = result.brand || result.translatedName || query;
+        toast.success(`🏢 "${brandName}" is a brand — opening brand profile`);
+        navigate(`/brand/${encodeURIComponent(brandName.toLowerCase())}`);
+        return;
+      }
+      
+      // Disambiguation needed → show suggestions
+      if (result.code === 'NEEDS_DISAMBIGUATION') {
+        setBuilding(false);
+        setShowResults(true);
+        setResults([]);
+        setSuggestions(result.suggestions || []);
+        toast.error(result.reason || 'Please be more specific');
+        return;
+      }
       
       if (result.success) {
         // Success!
@@ -526,15 +573,30 @@ const SearchPagePremium = () => {
                 results.map((p) => (
                   <Card key={p.id} className="p-5 cursor-pointer hover:shadow-mint-soft-lg hover:-translate-y-0.5 transition-all duration-200" onClick={() => navigate(`/product/${p.id}`)}>
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-black text-ink">{p.name}</div>
-                        <div className="mt-1">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-black text-ink truncate">{p.name}</div>
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
                           <Badge variant="neutral">{p.category || 'general'}</Badge>
+                          {p.status === 'complete' && (
+                            <span className="text-xs text-emerald-600 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" /> Ready
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-mint-600 to-cyan-500 text-white flex items-center justify-center font-black shadow-mint-soft">
-                        {p.overall_score ?? '—'}
-                      </div>
+                      {p.overall_score != null ? (
+                        <div className={`h-12 w-12 rounded-2xl text-white flex items-center justify-center font-black shadow-sm ${
+                          p.overall_score >= 80 ? 'bg-gradient-to-br from-emerald-500 to-teal-500' :
+                          p.overall_score >= 60 ? 'bg-gradient-to-br from-amber-500 to-orange-500' :
+                          'bg-gradient-to-br from-red-500 to-rose-500'
+                        }`}>
+                          {p.overall_score}
+                        </div>
+                      ) : (
+                        <div className="h-12 w-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 font-black">
+                          —
+                        </div>
+                      )}
                     </div>
                     <div className="mt-4 text-sm text-slate-600 line-clamp-3">{p.summary || 'No summary yet.'}</div>
                     <div className="mt-4 text-sm font-semibold text-mint-800">View dossier →</div>

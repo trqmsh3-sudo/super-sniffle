@@ -6,6 +6,7 @@ const QualityMonitor = require('./qualityMonitor');
 const redditScraper = require('./redditScraper');
 const dataAggregator = require('./dataAggregator');
 const smartCache = require('./smartCache');
+const versionDetector = require('./productVersionDetector');
 
 /**
  * Simple Dossier Builder - V2.0 עם Web Scraping!
@@ -113,9 +114,12 @@ class SimpleDossierBuilder {
         // 5. Save product + Calculate scores
         console.log('\n📝 Step 5/6: Saving to database...\n');
         productId = await this.saveProduct(productName, category, imageUrl, images);
-        const scores = this.calculateScores(aiData);
+        const scores = this.calculateScores(aiData, aggregatedData.totalReviews, aggregatedData.confidence);
         console.log(`   ✓ Product ID: ${productId}`);
-        console.log(`   ✓ Overall Score: ${scores.overall}/100`);
+        console.log(`   ✓ Overall Score: ${scores.overall}/100 (raw: ${scores._meta.rawOverall}, confidence factor: ${scores._meta.confidenceFactor}%)`);
+        if (scores._meta.reviewCap < 100) {
+          console.log(`   ⚠️ Score capped at ${scores._meta.reviewCap} due to limited data (${scores._meta.totalReviews} sources)`);
+        }
         
         // 6. Quality check + Save dossier
         console.log('\n📝 Step 6/6: Quality check + saving dossier...\n');
@@ -355,34 +359,58 @@ class SimpleDossierBuilder {
   }
 
   /**
-   * Calculate scores from AI data
+   * Calculate scores from AI data — V3.0 (Confidence-weighted)
+   * Scores are adjusted by confidence level so that 9 reviews can't produce a 90/100
    */
-  calculateScores(data) {
+  calculateScores(data, totalReviews = 0, confidence = 50) {
     const prosCount = data.pros.length;
     const consCount = data.cons.length;
     const issuesCount = data.common_issues.length;
 
-    // Overall score based on sentiment
-    let overall = 60;
-    if (data.overall_sentiment === 'positive') overall = 75 + Math.min(15, prosCount * 3);
-    else if (data.overall_sentiment === 'negative') overall = 45 - Math.min(20, consCount * 3);
-    else overall = 55 + (prosCount - consCount) * 3;
+    // Raw overall score based on sentiment
+    let rawOverall = 60;
+    if (data.overall_sentiment === 'positive') rawOverall = 75 + Math.min(15, prosCount * 3);
+    else if (data.overall_sentiment === 'negative') rawOverall = 45 - Math.min(20, consCount * 3);
+    else rawOverall = 55 + (prosCount - consCount) * 3;
 
-    // Quality score
-    const quality = Math.max(30, Math.min(95, overall + (prosCount * 3) - (issuesCount * 8)));
+    // Raw quality score
+    const rawQuality = Math.max(30, Math.min(95, rawOverall + (prosCount * 3) - (issuesCount * 8)));
 
-    // Value score
+    // Value score (not confidence-weighted — it's from Gemini's judgment)
     const valueMap = { excellent: 90, good: 75, fair: 55, poor: 35 };
     const value = valueMap[data.value_rating] || 60;
 
-    // Reliability score
-    const reliability = Math.max(40, Math.min(95, 85 - (issuesCount * 10) - (consCount * 2)));
+    // Raw reliability score
+    const rawReliability = Math.max(40, Math.min(95, 85 - (issuesCount * 10) - (consCount * 2)));
+
+    // --- Confidence weighting ---
+    // Formula: finalScore = rawScore × (0.4 + 0.6 × confidence/100)
+    // With 100% confidence → score stays as-is
+    // With 0% confidence → score is capped at 40% of raw
+    // With 50% confidence → score is 70% of raw
+    const confidenceFactor = 0.4 + 0.6 * (Math.min(100, confidence) / 100);
+    
+    // Minimum reviews cap: if fewer than 5 total sources, cap at 75
+    const reviewCap = totalReviews < 5 ? 75 : 100;
+
+    const applyWeighting = (raw) => {
+      const weighted = Math.round(raw * confidenceFactor);
+      return Math.max(0, Math.min(reviewCap, weighted));
+    };
 
     return {
-      overall: Math.round(Math.max(0, Math.min(100, overall))),
-      quality: Math.round(Math.max(0, Math.min(100, quality))),
-      value: Math.round(Math.max(0, Math.min(100, value))),
-      reliability: Math.round(Math.max(0, Math.min(100, reliability)))
+      overall: applyWeighting(rawOverall),
+      quality: applyWeighting(rawQuality),
+      value: Math.round(Math.max(0, Math.min(reviewCap, value))),
+      reliability: applyWeighting(rawReliability),
+      // Metadata for frontend display
+      _meta: {
+        rawOverall: Math.round(Math.max(0, Math.min(100, rawOverall))),
+        confidenceFactor: Math.round(confidenceFactor * 100),
+        reviewCap,
+        totalReviews,
+        confidence: Math.round(confidence),
+      }
     };
   }
 

@@ -7,6 +7,8 @@ const db = require('./config/database');
 const DossierBuilder = require('./services/simpleDossierBuilder');
 const productImageService = require('./services/productImageService');
 const productValidator = require('./services/productValidator');
+const versionDetector = require('./services/productVersionDetector');
+const brandIntelligence = require('./services/brandIntelligence');
 
 // Import Windsurf's middleware (converting from ES modules)
 const rateLimit = require('express-rate-limit');
@@ -44,6 +46,18 @@ const apiLimiter = rateLimit({
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Build-specific rate limiter (expensive endpoint)
+const buildLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 3, // max 3 builds per minute per IP
+  message: {
+    success: false,
+    error: 'Too many build requests. Please wait a minute before trying again.'
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -410,6 +424,37 @@ app.get('/api/search', async (req, res) => {
 });
 
 /**
+ * GET /api/brands/:name
+ * Wikipedia-style brand profile page
+ */
+app.get('/api/brands/:name', async (req, res) => {
+  try {
+    const brandName = req.params.name;
+    
+    if (!brandName || brandName.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'Brand name is required (min 2 characters)'
+      });
+    }
+
+    console.log(`🏢 Brand profile requested: ${brandName}`);
+    const profile = await brandIntelligence.getBrandProfile(brandName);
+
+    res.json({
+      success: true,
+      ...profile
+    });
+  } catch (error) {
+    console.error('Brand profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: error?.message || 'Failed to generate brand profile'
+    });
+  }
+});
+
+/**
  * GET /api/products
  * List all products
  */
@@ -492,9 +537,16 @@ app.get('/api/products/:id', async (req, res) => {
       }
     }
 
+    // Quality check
+    const QualityMonitorForGet = require('./services/qualityMonitor');
+    const getQuality = QualityMonitorForGet.isDossierGeneric(dossier?.dossier || {});
+    const getQualityWarning = QualityMonitorForGet.getUserWarning(getQuality);
+
     res.json({
       success: true,
-      data: dossier
+      data: dossier,
+      qualityWarning: getQualityWarning || null,
+      qualityScore: getQuality.qualityScore,
     });
 
   } catch (error) {
@@ -510,7 +562,7 @@ app.get('/api/products/:id', async (req, res) => {
  * POST /api/products/build
  * Build a new product dossier with Smart AI Routing
  */
-app.post('/api/products/build', async (req, res) => {
+app.post('/api/products/build', buildLimiter, async (req, res) => {
   try {
     const { productName, category } = req.body;
 
@@ -529,11 +581,12 @@ app.post('/api/products/build', async (req, res) => {
     if (validation?.needsDisambiguation) {
       return res.status(400).json({
         success: false,
-        code: 'NEEDS_DISAMBIGUATION',
-        error: 'Query is too broad',
+        code: validation.isBrand ? 'BRAND_DETECTED' : 'NEEDS_DISAMBIGUATION',
+        error: validation.isBrand ? 'This is a brand name' : 'Query is too broad',
         reason: validation.reason || 'Please specify a model (not just a brand/category).',
         originalInput: validation.originalName || productName,
         translatedName: validation.translatedName || null,
+        brand: validation.brand || null,
         suggestions: Array.isArray(validation.suggestions) ? validation.suggestions : [],
       });
     }
@@ -552,6 +605,23 @@ app.post('/api/products/build', async (req, res) => {
     const finalProductName = validation.translatedName;
     console.log(`   ✅ Valid product: "${validation.originalName}" → "${finalProductName}" (${validation.language})`);
 
+    // 🔍 STEP 1B: Version detection — check if this product version exists
+    const parsed = versionDetector.parse(finalProductName);
+    const versionCheck = versionDetector.checkVersionExists(parsed);
+    let versionWarning = null;
+
+    if (!versionCheck.exists) {
+      console.log(`   ⚠️ Version check: ${versionCheck.message}`);
+      versionWarning = {
+        type: versionCheck.isUpcoming ? 'unreleased' : 'nonexistent',
+        message: versionCheck.message,
+        latestKnown: versionCheck.latestKnown,
+        suggestion: versionCheck.suggestion,
+      };
+      
+      // For completely nonexistent versions (e.g., iPhone 25), suggest the latest and still build
+      // But mark the dossier as partial / based on rumors
+    }
 
     // Check if product already exists WITH a completed dossier (use translated name)
     const existing = await db.query(
@@ -579,11 +649,19 @@ app.post('/api/products/build', async (req, res) => {
         }
       }
       
+      // Quality check on existing dossier
+      const QualityMonitor = require('./services/qualityMonitor');
+      const existingQuality = QualityMonitor.isDossierGeneric(dossier?.dossier || {});
+      const qualityWarning = QualityMonitor.getUserWarning(existingQuality);
+
       return res.json({
         success: true,
         message: 'Product dossier already exists',
         productId,
         data: dossier,
+        versionWarning: versionWarning || null,
+        qualityWarning: qualityWarning || null,
+        qualityScore: existingQuality.qualityScore,
         translation: validation.language !== 'English' ? {
           original: validation.originalName,
           translated: finalProductName,
@@ -602,11 +680,19 @@ app.post('/api/products/build', async (req, res) => {
     // Get the full dossier
     const dossier = await builder.getDossier(result.productId);
 
+    // Include quality info from the build result
+    const qualityWarning = result.qualityCheck
+      ? require('./services/qualityMonitor').getUserWarning(result.qualityCheck)
+      : null;
+
     res.json({
       success: true,
       message: 'Dossier built successfully',
       productId: result.productId,
       data: dossier,
+      versionWarning: versionWarning || null,
+      qualityWarning: qualityWarning || null,
+      qualityScore: result.qualityCheck?.qualityScore ?? null,
       ai_usage: {
         gemini_calls: 1,
         cost: '$0.00',

@@ -12,7 +12,7 @@ import SkeletonDossier from '../components/SkeletonDossier';
 const DossierPagePremium = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
-  const { dossier, loading, error } = useProductDossier(productId);
+  const { dossier, loading, error, qualityWarning, qualityScore } = useProductDossier(productId);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [imageError, setImageError] = useState(false);
   const [isProductBookmarked, setIsProductBookmarked] = useState(false);
@@ -145,6 +145,26 @@ const DossierPagePremium = () => {
               confidence={meta?.confidence} 
               totalReviews={meta?.total_reviews} 
             />
+
+            {/* Quality Warning Banner */}
+            {qualityWarning && (
+              <div className={`mt-3 rounded-xl border p-4 flex items-start gap-3 ${
+                qualityWarning.type === 'low_data' 
+                  ? 'bg-amber-50/70 border-amber-200 text-amber-800' 
+                  : 'bg-orange-50/70 border-orange-200 text-orange-800'
+              }`}>
+                <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-semibold text-sm">{qualityWarning.message}</div>
+                  {qualityWarning.action && (
+                    <div className="text-xs mt-1 opacity-80">{qualityWarning.action}</div>
+                  )}
+                  {qualityScore != null && (
+                    <div className="text-xs mt-1 opacity-60">Quality score: {qualityScore}/100</div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* THE VERDICT */}
             <Card className="mt-6 p-6 border-2">

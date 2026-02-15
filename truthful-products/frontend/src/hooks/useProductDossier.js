@@ -20,6 +20,8 @@ const API_URL = getAPIUrl();
 // Hook לחיבור עם Backend API
 export const useProductDossier = (productId) => {
   const [dossier, setDossier] = useState(null);
+  const [qualityWarning, setQualityWarning] = useState(null);
+  const [qualityScore, setQualityScore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -44,6 +46,8 @@ export const useProductDossier = (productId) => {
         
         if (data.success && data.data) {
           setDossier(data.data);
+          setQualityWarning(data.qualityWarning || null);
+          setQualityScore(data.qualityScore ?? null);
         } else {
           throw new Error(data.error || 'Failed to load dossier');
         }
@@ -65,7 +69,7 @@ export const useProductDossier = (productId) => {
     return () => clearInterval(interval);
   }, [productId]);
 
-  return { dossier, loading, error };
+  return { dossier, loading, error, qualityWarning, qualityScore };
 };
 
 export default useProductDossier;

@@ -15,6 +15,7 @@ const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
 const SearchPagePremium = lazy(() => import('./pages/SearchPagePremium'));
 const DossierPagePremium = lazy(() => import('./pages/DossierPagePremium'));
 const ReportPage = lazy(() => import('./pages/ReportPage'));
+const BrandPage = lazy(() => import('./pages/BrandPage'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -48,6 +49,11 @@ function AppContent() {
           <Route path="/report/:id" element={
             <Suspense fallback={<LoadingSpinner />}>
               <ReportPage />
+            </Suspense>
+          } />
+          <Route path="/brand/:name" element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <BrandPage />
             </Suspense>
           } />
           

@@ -136,7 +136,7 @@ Return ONLY JSON (no markdown):
   },
   "overall_sentiment": "positive/mixed/negative",
   "value_rating": "excellent/good/fair/poor",
-  "confidence": ${Math.min(95, aggregatedData.confidence + 10)}
+  "confidence": ${Math.min(95, aggregatedData.confidence)}
 }`;
 
       const result = await this.model.generateContent(prompt);
