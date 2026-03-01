@@ -2,8 +2,5 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "env": {
-    "PRODUCT_API_URL": "@product_api_url",
-    "REDIS_URL": "@redis_url"
-  }
+  "regions": ["iad1"]
 }
