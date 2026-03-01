@@ -1,3 +1,0 @@
-<script async src="https://cse.google.com/cse.js?cx=900c2096c75e34c89">
-</script>
-<div class="gcse-search"></div>
