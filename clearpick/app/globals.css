@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --brand-primary: #2563eb;
+  --brand-secondary: #1e40af;
+  --foreground: #111827;
+  --background: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground: #f9fafb;
+    --background: #0a0a0a;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
