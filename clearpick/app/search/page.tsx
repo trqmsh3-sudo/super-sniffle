@@ -320,6 +320,37 @@ function SearchContent() {
           {error && !loading && (
             <div className="rounded-card border border-red-200 bg-red-50 p-6 text-center">
               <p className="text-sm text-red-600">{error}</p>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  fetch(`/api/search?q=${encodeURIComponent(query)}`)
+                    .then(async (res) => {
+                      if (!res.ok) {
+                        const body = await res.json().catch(() => ({}));
+                        throw new Error(body.error ?? 'Search failed');
+                      }
+                      return res.json() as Promise<SearchResponse>;
+                    })
+                    .then((data) => {
+                      setResults(data.results);
+                      setCacheStatus(data.cacheStatus);
+                      setCachedAt(data.cachedAt);
+                      setAverageAccuracy(data.averageAccuracy);
+                      setTotalRatings(data.totalRatings);
+                    })
+                    .catch((err) => {
+                      setError(err instanceof Error ? err.message : 'Something went wrong.');
+                    })
+                    .finally(() => setLoading(false));
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary-800 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-700 active:scale-[0.97]"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Try again
+              </button>
             </div>
           )}
 

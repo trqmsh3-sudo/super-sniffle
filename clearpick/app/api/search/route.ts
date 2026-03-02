@@ -78,12 +78,51 @@ Important: Return REAL products with REAL prices from ${CURRENT_YEAR} or recent 
 No markdown fences, no explanation — ONLY the JSON array.`;
 
     console.log(`[Search API] Gemini+GoogleSearch query: "${query}"`);
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
 
-    // Parse JSON response
-    const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-    const parsed = JSON.parse(jsonStr);
+    // Retry up to 2 times on transient failures
+    let text = '';
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const result = await model.generateContent(prompt);
+        text = result.response.text().trim();
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        console.warn(`[Search API] Gemini attempt ${attempt + 1} failed:`, e);
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    if (lastErr) throw lastErr;
+
+    // Robust JSON extraction — find the outermost [ ... ]
+    let jsonStr = text;
+
+    // Strip markdown fences
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+
+    // Find first '[' and last ']' to extract the JSON array
+    const firstBracket = jsonStr.indexOf('[');
+    const lastBracket = jsonStr.lastIndexOf(']');
+    if (firstBracket !== -1 && lastBracket > firstBracket) {
+      jsonStr = jsonStr.slice(firstBracket, lastBracket + 1);
+    }
+
+    // Fix common JSON issues: trailing commas before ]
+    jsonStr = jsonStr.replace(/,\s*]/g, ']');
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      console.error('[Search API] JSON parse failed. Raw text (first 500 chars):', text.slice(0, 500));
+      return NextResponse.json(
+        { error: 'Search returned unexpected format. Please try again.', results: [] },
+        { status: 500 },
+      );
+    }
 
     if (!Array.isArray(parsed)) {
       console.warn('[Search API] Gemini returned non-array:', typeof parsed);
