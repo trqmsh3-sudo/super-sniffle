@@ -13,8 +13,8 @@ import {
   type SearchResult,
 } from '@/lib/searchCache';
 
-// Model priority: 2.0-flash has 1500 RPD free vs 2.5-flash's 20 RPD
-const MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash'] as const;
+// Model priority: try models with highest free-tier quota first
+const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'] as const;
 const CURRENT_YEAR = new Date().getFullYear();
 
 export async function GET(request: NextRequest) {
