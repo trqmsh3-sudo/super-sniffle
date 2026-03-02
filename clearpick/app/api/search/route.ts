@@ -13,7 +13,8 @@ import {
   type SearchResult,
 } from '@/lib/searchCache';
 
-const MODEL_NAME = 'gemini-2.5-flash';
+// Model priority: 2.0-flash has 1500 RPD free vs 2.5-flash's 20 RPD
+const MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash'] as const;
 const CURRENT_YEAR = new Date().getFullYear();
 
 export async function GET(request: NextRequest) {
@@ -54,10 +55,6 @@ export async function GET(request: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      tools: [{ googleSearch: {} } as never],
-    });
 
     const prompt = `Search the web for: "${query}"
 
@@ -79,23 +76,34 @@ No markdown fences, no explanation — ONLY the JSON array.`;
 
     console.log(`[Search API] Gemini+GoogleSearch query: "${query}"`);
 
-    // Retry up to 2 times on transient failures
+    // Try each model in priority order; fallback on 429 / quota errors
     let text = '';
     let lastErr: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (const modelName of MODELS) {
       try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          tools: [{ googleSearch: {} } as never],
+        });
+        console.log(`[Search API] Trying model: ${modelName}`);
         const result = await model.generateContent(prompt);
         text = result.response.text().trim();
         lastErr = null;
         break;
       } catch (e) {
         lastErr = e;
-        console.warn(`[Search API] Gemini attempt ${attempt + 1} failed:`, e);
-        if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn(`[Search API] Model ${modelName} failed: ${msg.slice(0, 200)}`);
+        // If it's a quota/rate-limit error, try the next model
+        if (msg.includes('429') || msg.includes('quota') || msg.includes('rate')) {
+          continue;
+        }
+        // For other errors, wait 1s then try next model
+        await new Promise((r) => setTimeout(r, 1000));
       }
     }
 
-    if (lastErr) throw lastErr;
+    if (lastErr && !text) throw lastErr;
 
     // Robust JSON extraction — find the outermost [ ... ]
     let jsonStr = text;

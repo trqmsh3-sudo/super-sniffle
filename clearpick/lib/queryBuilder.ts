@@ -16,7 +16,8 @@ export interface QueryBuilderResult {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const MODEL_NAME = 'gemini-2.5-flash';
+// gemini-2.0-flash: 1500 RPD free tier (vs 20 for 2.5-flash)
+const MODEL_NAME = 'gemini-2.0-flash';
 
 // ── Main Function ────────────────────────────────────────────────────────────
 
