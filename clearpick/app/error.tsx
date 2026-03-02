@@ -15,33 +15,33 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <main className="min-h-[60vh] flex flex-col items-center justify-center px-4 py-24">
-      <div className="text-center max-w-lg">
-        <div className="text-6xl font-bold text-red-500 mb-4">Oops</div>
-        <h1 className="text-2xl font-bold text-white mb-2">
+    <main className="flex min-h-[60vh] flex-col items-center justify-center bg-surface-bg px-4 py-24">
+      <div className="max-w-lg text-center">
+        <div className="mb-4 text-6xl font-bold text-red-500">Oops</div>
+        <h1 className="mb-2 text-2xl font-bold text-gray-900">
           Something went wrong
         </h1>
-        <p className="text-slate-400 mb-8">
+        <p className="mb-8 text-gray-500">
           An unexpected error occurred. Please try again or search for something
           else.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+        <div className="mb-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <button
             onClick={reset}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+            className="rounded-xl bg-primary-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-primary-700"
           >
             Try again
           </button>
           <a
             href="/"
-            className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition-colors"
+            className="rounded-xl border border-surface-border bg-white px-6 py-3 font-semibold text-gray-600 transition-colors hover:bg-gray-50"
           >
             Back to homepage
           </a>
         </div>
 
-        <div className="max-w-md mx-auto">
+        <div className="mx-auto max-w-md">
           <SearchBar />
         </div>
       </div>

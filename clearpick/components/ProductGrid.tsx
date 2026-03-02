@@ -1,5 +1,5 @@
 // =============================================================================
-// ClearPick.ai — Product Grid Component (Dark Theme)
+// ClearPick.ai — Product Grid Component (Light Design System)
 // Flat responsive grid, sorted by year+rating DESC, max 24 products
 // =============================================================================
 
@@ -56,15 +56,15 @@ export default function ProductGrid({
 
   if (products.length === 0) {
     return (
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="rounded-xl border border-dashed p-12 text-center" style={{ borderColor: '#333' }}>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ backgroundColor: '#1a1a1a' }}>
-            <svg className="h-8 w-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <section className="mx-auto max-w-content px-6 py-20">
+        <div className="rounded-card border border-dashed border-surface-border bg-white p-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-bg">
+            <svg className="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-white/60">No products listed yet</h3>
-          <p className="mt-2 text-sm text-white/30">
+          <h3 className="text-lg font-semibold text-gray-600">No products listed yet</h3>
+          <p className="mt-2 text-sm text-gray-400">
             We are still gathering {brandName} product data. Check back soon.
           </p>
         </div>
@@ -75,14 +75,14 @@ export default function ProductGrid({
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-12 md:py-16">
+    <section className="mx-auto max-w-content px-6 py-12 md:py-16">
       {/* Section Header */}
       <div className="mb-8 flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
             Products
           </h2>
-          <p className="mt-1 text-sm text-white/40">
+          <p className="mt-1 text-sm text-gray-500">
             {products.length} {products.length === 1 ? 'model' : 'models'}
           </p>
         </div>
@@ -112,24 +112,24 @@ export default function ProductGrid({
 
 export function ProductGridSkeleton() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-12 md:py-16">
+    <section className="mx-auto max-w-content px-6 py-12 md:py-16">
       {/* Header skeleton */}
       <div className="mb-8">
-        <div className="h-8 w-32 rounded-lg shimmer" />
-        <div className="mt-2 h-4 w-48 rounded shimmer" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-gray-100" />
+        <div className="mt-2 h-4 w-48 animate-pulse rounded bg-gray-50" />
       </div>
 
       {/* Cards skeleton */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="overflow-hidden rounded-xl" style={{ backgroundColor: '#111', border: '1px solid #222' }}>
-            <div className="aspect-[4/3] shimmer" />
+          <div key={i} className="overflow-hidden rounded-card border border-surface-border bg-white">
+            <div className="aspect-[4/3] animate-pulse bg-gray-50" />
             <div className="p-3.5">
-              <div className="h-4 w-3/4 rounded shimmer" />
-              <div className="my-2 h-[2px] w-full rounded-full shimmer" />
-              <div className="h-3 w-16 rounded shimmer" />
-              <div className="mt-2 h-3 w-full rounded shimmer" />
-              <div className="mt-1 h-3 w-5/6 rounded shimmer" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
+              <div className="my-2 h-[2px] w-full animate-pulse rounded-full bg-gray-50" />
+              <div className="h-3 w-16 animate-pulse rounded bg-gray-100" />
+              <div className="mt-2 h-3 w-full animate-pulse rounded bg-gray-50" />
+              <div className="mt-1 h-3 w-5/6 animate-pulse rounded bg-gray-50" />
             </div>
           </div>
         ))}

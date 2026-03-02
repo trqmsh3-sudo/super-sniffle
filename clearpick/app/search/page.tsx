@@ -1,15 +1,20 @@
 // =============================================================================
-// ClearPick.ai — Search Results Page
+// ClearPick.ai — Search Results Page (SaaS Redesign)
 // /search?q=query
-// Intent routing + cache integration + accuracy rating + cache badge
+// FilterPanel sidebar · AIInsight · ProductCard grid · CompareBar · Comparison
 // =============================================================================
 
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { detectSearchIntent, type SearchIntent } from '@/lib/searchIntent';
 import SearchBar from '@/components/SearchBar';
+import ProductCard from '@/components/ProductCard';
+import AIInsight from '@/components/AIInsight';
+import FilterPanel, { DEFAULT_FILTERS, type FilterState } from '@/components/FilterPanel';
+import ComparisonTable, { CompareBar } from '@/components/ComparisonTable';
+import { VerifiedBadge, SourceLogos } from '@/components/TrustElements';
 import CacheBadge from '@/components/CacheBadge';
 import AccuracyRating from '@/components/AccuracyRating';
 
@@ -36,93 +41,33 @@ interface SearchResponse {
   error?: string;
 }
 
-// ── Result Card ──────────────────────────────────────────────────────────────
+// ── Product Card Skeleton ────────────────────────────────────────────────────
 
-function ResultCard({ item }: { item: SearchResultItem }) {
+function CardSkeleton() {
   return (
-    <a
-      href={item.url ?? '#'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="
-        group flex gap-4 rounded-2xl border border-gray-100 bg-white p-4
-        shadow-sm transition-all duration-200
-        hover:border-gray-200 hover:shadow-md
-      "
-    >
-      {/* Thumbnail */}
-      {item.image && (
-        <div className="hidden h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-gray-50 sm:block">
-          <img
-            src={item.image}
-            alt=""
-            className="h-full w-full object-contain p-2 transition-transform duration-200 group-hover:scale-105"
-            loading="lazy"
-          />
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="flex min-w-0 flex-1 flex-col justify-between">
-        <div>
-          <h3 className="truncate text-base font-semibold text-gray-900 group-hover:text-blue-600">
-            {item.title}
-          </h3>
-          {item.snippet && (
-            <p className="mt-1 line-clamp-2 text-sm text-gray-500">
-              {item.snippet}
-            </p>
-          )}
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          {/* Price */}
-          {item.price !== undefined && (
-            <span className="text-lg font-bold text-gray-900">
-              {item.currency === 'ILS' ? '₪' : '$'}
-              {item.price.toLocaleString()}
-            </span>
-          )}
-
-          {/* Star rating */}
-          {item.rating !== undefined && (
-            <span className="flex items-center gap-1 text-sm text-amber-500">
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              {item.rating.toFixed(1)}
-            </span>
-          )}
-
-          {/* Source */}
-          {item.source && (
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-500">
-              {item.source}
-            </span>
-          )}
-        </div>
+    <div className="rounded-card border border-surface-border bg-white p-5">
+      <div className="mb-4 flex items-start justify-between">
+        <div className="h-5 w-3/5 animate-pulse rounded-md bg-gray-100" />
+        <div className="h-9 w-9 animate-pulse rounded-xl bg-gray-100" />
       </div>
-    </a>
+      <div className="mb-3 h-48 animate-pulse rounded-xl bg-gray-50" />
+      <div className="mb-3 space-y-2">
+        <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
+        <div className="h-3 w-4/5 animate-pulse rounded bg-gray-50" />
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="h-6 w-20 animate-pulse rounded-md bg-gray-100" />
+        <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-50" />
+      </div>
+    </div>
   );
 }
 
-// ── Loading Skeleton ─────────────────────────────────────────────────────────
-
-function ResultSkeleton() {
+function SkeletonGrid() {
   return (
-    <div className="space-y-4">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div
-          key={i}
-          className="flex gap-4 rounded-2xl border border-gray-100 bg-white p-4"
-        >
-          <div className="hidden h-24 w-24 animate-pulse rounded-xl bg-gray-100 sm:block" />
-          <div className="flex flex-1 flex-col gap-2">
-            <div className="h-5 w-3/4 animate-pulse rounded bg-gray-100" />
-            <div className="h-4 w-full animate-pulse rounded bg-gray-50" />
-            <div className="h-4 w-1/4 animate-pulse rounded bg-gray-50" />
-          </div>
-        </div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <CardSkeleton key={i} />
       ))}
     </div>
   );
@@ -164,7 +109,15 @@ function SearchContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Intent detection + routing ──────────────────────────────────────────
+  // Filter / compare state
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [compareSet, setCompareSet] = useState<Set<string>>(new Set());
+  const [showComparison, setShowComparison] = useState(false);
+
+  const comparisonRef = useRef<HTMLDivElement>(null);
+
+  // ── Intent detection + fetch ────────────────────────────────────────────
 
   useEffect(() => {
     if (!query) return;
@@ -172,18 +125,17 @@ function SearchContent() {
     const detected = detectSearchIntent(query);
     setIntent(detected);
 
-    // Redirect brands directly to brand page
     if (detected.type === 'brand' && detected.slug) {
       router.replace(`/brand/${detected.slug}`);
       return;
     }
-
-    // Garbage → don't search
     if (detected.type === 'garbage') return;
 
-    // Fetch results
     setLoading(true);
     setError(null);
+    setCompareSet(new Set());
+    setShowComparison(false);
+    setFilters(DEFAULT_FILTERS);
 
     fetch(`/api/search?q=${encodeURIComponent(query)}`)
       .then(async (res) => {
@@ -203,10 +155,105 @@ function SearchContent() {
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Something went wrong.');
       })
-      .finally(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, [query, router]);
+
+  // ── Derived: available brands ───────────────────────────────────────────
+
+  const availableBrands = useMemo(() => {
+    const set = new Set<string>();
+    results.forEach((r) => {
+      if (r.source) set.add(r.source);
+    });
+    return Array.from(set).sort();
+  }, [results]);
+
+  // ── Derived: filtered + sorted results ──────────────────────────────────
+
+  const filteredResults = useMemo(() => {
+    let items = [...results];
+
+    // Price filter
+    if (filters.priceMin > 0) {
+      items = items.filter((r) => (r.price ?? 0) >= filters.priceMin);
+    }
+    if (filters.priceMax < 10000) {
+      items = items.filter((r) => (r.price ?? 0) <= filters.priceMax);
+    }
+
+    // Brand (source) filter
+    if (filters.brands.length > 0) {
+      items = items.filter((r) => r.source && filters.brands.includes(r.source));
+    }
+
+    // Rating filter
+    if (filters.minRating > 0) {
+      items = items.filter((r) => {
+        const ratingOut10 = r.rating ? (r.rating > 5 ? r.rating : r.rating * 2) : 0;
+        return ratingOut10 >= filters.minRating;
+      });
+    }
+
+    // Sort
+    switch (filters.sort) {
+      case 'price-asc':
+        items.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+        break;
+      case 'price-desc':
+        items.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+        break;
+      case 'rating':
+        items.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+        break;
+      default:
+        break;
+    }
+
+    return items;
+  }, [results, filters]);
+
+  // ── Comparison helpers ──────────────────────────────────────────────────
+
+  const toggleCompare = useCallback((name: string) => {
+    setCompareSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else if (next.size < 3) {
+        next.add(name);
+      }
+      return next;
+    });
+  }, []);
+
+  const compareProducts = useMemo(
+    () =>
+      results
+        .filter((r) => compareSet.has(r.title))
+        .map((r) => ({
+          name: r.title,
+          price: r.price ? `$${r.price.toLocaleString()}` : undefined,
+          rating: r.rating ?? 0,
+          description: r.snippet,
+          source: r.source,
+          image: r.image,
+        })),
+    [results, compareSet],
+  );
+
+  const handleViewCompare = useCallback(() => {
+    setShowComparison(true);
+    setTimeout(() => comparisonRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+  }, []);
+
+  // ── AI Insight derived data ─────────────────────────────────────────────
+
+  const topProduct = results[0]?.title;
+  const priceRange = useMemo(() => {
+    const prices = results.filter((r) => r.price && r.price > 0).map((r) => r.price!);
+    if (prices.length < 2) return undefined;
+    return `$${Math.min(...prices).toLocaleString()} – $${Math.max(...prices).toLocaleString()}`;
+  }, [results]);
 
   // ── Accuracy rating callback ────────────────────────────────────────────
 
@@ -215,14 +262,14 @@ function SearchContent() {
     setTotalRatings((prev) => prev + 1);
   }, []);
 
-  // ── Empty state ─────────────────────────────────────────────────────────
+  // ── Empty state (no query) ──────────────────────────────────────────────
 
   if (!query) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-8 px-4">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">
-            Clear<span className="text-blue-500">Pick</span>
+            Clear<span className="text-accent">Pick</span>
           </h1>
           <p className="mt-2 text-gray-500">
             AI-powered product search with accuracy ratings
@@ -236,78 +283,175 @@ function SearchContent() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3">
-          <a
-            href="/search"
-            className="hidden text-lg font-bold text-gray-900 sm:block"
-          >
-            Clear<span className="text-blue-500">Pick</span>
-          </a>
+    <div className="min-h-screen bg-surface-bg">
+      {/* Compact search bar */}
+      <div className="border-b border-surface-border bg-white">
+        <div className="mx-auto flex max-w-content items-center gap-4 px-4 py-3 sm:px-6">
           <SearchBar initialQuery={query} compact />
         </div>
-      </header>
+      </div>
 
-      {/* Content */}
-      <main className="mx-auto max-w-4xl px-4 py-6">
-        {/* Garbage query */}
-        {intent?.type === 'garbage' && (
-          <div className="mt-12">
-            <GarbageMessage query={query} />
-          </div>
+      {/* Main layout */}
+      <div className="mx-auto flex max-w-content gap-6 px-4 py-6 sm:px-6">
+        {/* Sidebar — desktop only */}
+        {!loading && results.length > 0 && intent?.type !== 'garbage' && (
+          <aside className="hidden w-64 shrink-0 lg:block">
+            <FilterPanel
+              filters={filters}
+              onChange={setFilters}
+              availableBrands={availableBrands}
+            />
+          </aside>
         )}
 
-        {/* Loading */}
-        {loading && <ResultSkeleton />}
-
-        {/* Error */}
-        {error && !loading && (
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-center">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        {/* Results */}
-        {!loading && !error && results.length > 0 && intent?.type !== 'garbage' && (
-          <>
-            {/* Meta bar */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-gray-500">
-                <span className="font-medium text-gray-700">{results.length}</span> results
-                for &ldquo;<span className="font-medium text-gray-700">{query}</span>&rdquo;
-              </p>
-              <CacheBadge status={cacheStatus} cachedAt={cachedAt} />
-            </div>
-
-            {/* Result list */}
-            <div className="space-y-3">
-              {results.map((item) => (
-                <ResultCard key={item.id} item={item} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* No results */}
-        {!loading &&
-          !error &&
-          results.length === 0 &&
-          intent?.type !== 'garbage' &&
-          intent?.type !== 'brand' && (
-            <div className="mt-12 text-center">
-              <div className="mb-4 text-5xl">📭</div>
-              <h2 className="text-lg font-semibold text-gray-700">No results found</h2>
-              <p className="mt-1 text-sm text-gray-400">
-                Try a different search term or check back later.
-              </p>
+        {/* Content area */}
+        <main className="min-w-0 flex-1">
+          {/* Garbage query */}
+          {intent?.type === 'garbage' && (
+            <div className="mt-12">
+              <GarbageMessage query={query} />
             </div>
           )}
-      </main>
+
+          {/* Loading */}
+          {loading && <SkeletonGrid />}
+
+          {/* Error */}
+          {error && !loading && (
+            <div className="rounded-card border border-red-200 bg-red-50 p-6 text-center">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {/* Results */}
+          {!loading && !error && results.length > 0 && intent?.type !== 'garbage' && (
+            <>
+              {/* AI Insight */}
+              <AIInsight
+                query={query}
+                resultCount={results.length}
+                topProduct={topProduct}
+                priceRange={priceRange}
+              />
+
+              {/* Meta bar */}
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-sm text-gray-500">
+                    <span className="font-medium text-gray-700">{filteredResults.length}</span> results
+                    for &ldquo;<span className="font-medium text-gray-700">{query}</span>&rdquo;
+                  </p>
+                  <CacheBadge status={cacheStatus} cachedAt={cachedAt} />
+                </div>
+
+                {/* Mobile filter button */}
+                <button
+                  onClick={() => setMobileFilterOpen(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-surface-border bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  Filters
+                </button>
+              </div>
+
+              {/* Verified badge */}
+              <div className="mb-4">
+                <VerifiedBadge sourceCount={availableBrands.length} />
+              </div>
+
+              {/* Product grid */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredResults.map((item) => (
+                  <ProductCard
+                    key={item.id}
+                    name={item.title}
+                    year={new Date().getFullYear()}
+                    price={item.price ? `$${item.price.toLocaleString()}` : 'N/A'}
+                    image={item.image ?? ''}
+                    description={item.snippet ?? ''}
+                    rating={item.rating ?? 0}
+                    source={item.url ?? '#'}
+                    isSelected={compareSet.has(item.title)}
+                    onToggleCompare={toggleCompare}
+                  />
+                ))}
+              </div>
+
+              {/* No filtered results */}
+              {filteredResults.length === 0 && results.length > 0 && (
+                <div className="mt-8 text-center">
+                  <p className="text-sm text-gray-500">No products match your filters.</p>
+                  <button
+                    onClick={() => setFilters(DEFAULT_FILTERS)}
+                    className="mt-2 text-sm font-medium text-accent hover:underline"
+                  >
+                    Reset filters
+                  </button>
+                </div>
+              )}
+
+              {/* Source logos */}
+              <div className="mt-8">
+                <SourceLogos />
+              </div>
+
+              {/* Comparison table */}
+              {showComparison && (
+                <div ref={comparisonRef} className="mt-6">
+                  <ComparisonTable
+                    products={compareProducts}
+                    onRemove={(name) => toggleCompare(name)}
+                    onClear={() => {
+                      setCompareSet(new Set());
+                      setShowComparison(false);
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {/* No results */}
+          {!loading &&
+            !error &&
+            results.length === 0 &&
+            intent?.type !== 'garbage' &&
+            intent?.type !== 'brand' && (
+              <div className="mt-12 text-center">
+                <div className="mb-4 text-5xl">📭</div>
+                <h2 className="text-lg font-semibold text-gray-700">No results found</h2>
+                <p className="mt-1 text-sm text-gray-400">
+                  Try a different search term or check back later.
+                </p>
+              </div>
+            )}
+        </main>
+      </div>
+
+      {/* Mobile filter drawer */}
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        availableBrands={availableBrands}
+        isMobile
+        isOpen={mobileFilterOpen}
+        onClose={() => setMobileFilterOpen(false)}
+      />
+
+      {/* Compare bar (sticky bottom) */}
+      <CompareBar
+        count={compareSet.size}
+        onView={handleViewCompare}
+        onClear={() => {
+          setCompareSet(new Set());
+          setShowComparison(false);
+        }}
+      />
 
       {/* Floating accuracy rating widget */}
-      {!loading && results.length > 0 && intent?.type !== 'garbage' && (
+      {!loading && results.length > 0 && intent?.type !== 'garbage' && compareSet.size === 0 && (
         <AccuracyRating
           query={query}
           averageAccuracy={averageAccuracy}
@@ -325,8 +469,10 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <span className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-500" />
+        <div className="flex min-h-screen items-center justify-center bg-surface-bg">
+          <div className="mx-auto max-w-content px-4">
+            <SkeletonGrid />
+          </div>
         </div>
       }
     >

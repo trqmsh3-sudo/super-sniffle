@@ -1,6 +1,6 @@
 // =============================================================================
 // ClearPick.ai — SearchBar with Live Intent Hints
-// Uses useSearchIntent hook for real-time feedback as user types
+// Design system: rounded-card, primary colors, 8px grid spacing
 // =============================================================================
 
 'use client';
@@ -10,11 +10,8 @@ import { useRouter } from 'next/navigation';
 import { useSearchIntent } from '@/hooks/useSearchIntent';
 
 interface SearchBarProps {
-  /** Pre-filled query (e.g., from URL params) */
   initialQuery?: string;
-  /** Auto-focus on mount */
   autoFocus?: boolean;
-  /** Compact mode for header/nav usage */
   compact?: boolean;
 }
 
@@ -22,7 +19,7 @@ const INTENT_HINTS = {
   brand: {
     icon: '🏢',
     label: 'Brand',
-    color: 'bg-violet-50 text-violet-700 border-violet-200',
+    color: 'bg-primary-50 text-primary-700 border-primary-200',
   },
   product: {
     icon: '📦',
@@ -58,21 +55,17 @@ export default function SearchBar({
 
   const { intent, isPending } = useSearchIntent(query, { debounce: 250 });
 
-  // ── Submit ──────────────────────────────────────────────────────────────
-
   const handleSubmit = useCallback(
     (e?: FormEvent) => {
       e?.preventDefault();
       const trimmed = query.trim();
       if (!trimmed) return;
 
-      // If intent says it's a brand, navigate directly to brand page
       if (intent?.type === 'brand' && intent.slug) {
         router.push(`/brand/${intent.slug}`);
         return;
       }
 
-      // All other intents → search page
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
     },
     [query, intent, router],
@@ -80,21 +73,15 @@ export default function SearchBar({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        handleSubmit();
-      }
+      if (e.key === 'Enter') handleSubmit();
     },
     [handleSubmit],
   );
 
-  // ── Intent hint rendering ─────────────────────────────────────────────
-
   const showHint = isFocused && query.trim().length > 0 && intent && !isPending;
-  const isGarbage = intent?.type === 'garbage';
 
   return (
-    <div className={`relative w-full ${compact ? 'max-w-md' : 'max-w-2xl'} mx-auto`}>
-      {/* Search form */}
+    <div className={`relative w-full ${compact ? 'max-w-md' : 'max-w-[770px]'} mx-auto`}>
       <form onSubmit={handleSubmit} className="relative">
         {/* Search icon */}
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -104,117 +91,79 @@ export default function SearchBar({
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
 
-        {/* Input */}
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => {
-            // Delay to allow click on hint pill
-            setTimeout(() => setIsFocused(false), 200);
-          }}
+          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           onKeyDown={handleKeyDown}
           placeholder="Search for a product, brand, or category..."
           autoFocus={autoFocus}
           className={`
-            w-full rounded-2xl border border-gray-200 bg-white
-            ${compact ? 'py-2.5 pl-10 pr-12 text-sm' : 'py-3.5 pl-12 pr-14 text-base'}
-            shadow-sm
+            w-full border bg-white
+            ${compact
+              ? 'rounded-xl py-2.5 pl-10 pr-12 text-sm'
+              : 'rounded-[14px] py-4 pl-12 pr-14 text-base'
+            }
+            border-surface-border
+            shadow-card
             transition-all duration-200
             placeholder:text-gray-400
-            focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50
-            ${isFocused ? 'border-blue-300 shadow-md' : ''}
+            focus:border-accent focus:outline-none focus:ring-4 focus:ring-primary-100
+            ${isFocused ? 'border-accent shadow-card-hover' : ''}
           `}
         />
 
-        {/* Submit button */}
+        {/* Submit arrow */}
         <button
           type="submit"
           className={`
             absolute inset-y-0 right-0 flex items-center
             ${compact ? 'pr-3' : 'pr-4'}
-            text-gray-400 transition-colors hover:text-blue-500
+            text-gray-400 transition-colors hover:text-accent
           `}
           aria-label="Search"
         >
-          <svg
-            className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 7l5 5m0 0l-5 5m5-5H6"
-            />
+          <svg className={compact ? 'h-4 w-4' : 'h-5 w-5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
         </button>
       </form>
 
-      {/* ── Intent Hint Pill ─────────────────────────────────────────────── */}
+      {/* Intent hint pill */}
       {showHint && (
-        <div
-          className={`
-            absolute left-0 right-0 z-20
-            ${compact ? 'mt-1.5' : 'mt-2'}
-            flex items-center gap-2 overflow-hidden
-            animate-in fade-in slide-in-from-top-1 duration-200
-          `}
-        >
-          {/* Pending spinner */}
+        <div className={`absolute left-0 right-0 z-20 ${compact ? 'mt-1.5' : 'mt-2'} flex items-center gap-2`}>
           {isPending && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-500 shadow-sm">
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-surface-border bg-white px-3 py-1.5 text-xs text-gray-500 shadow-card">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-accent" />
               Detecting...
             </span>
           )}
 
-          {/* Intent pill */}
           {!isPending && intent && (
             <>
               {intent.type === 'brand' && intent.slug ? (
                 <button
                   type="button"
                   onClick={() => router.push(`/brand/${intent.slug}`)}
-                  className={`
-                    inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs
-                    font-medium shadow-sm transition-all duration-150
-                    hover:shadow-md hover:scale-[1.02] active:scale-[0.98]
-                    cursor-pointer
-                    ${INTENT_HINTS.brand.color}
-                  `}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium shadow-card transition-all hover:shadow-card-hover hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${INTENT_HINTS.brand.color}`}
                 >
-                  <span className="truncate">{INTENT_HINTS.brand.icon}</span>
-                  <span className="truncate">Brand — view {intent.matchedBrand?.name} page →</span>
+                  <span>{INTENT_HINTS.brand.icon}</span>
+                  <span>Brand — view {intent.matchedBrand?.name} page →</span>
                 </button>
               ) : (
-                <span
-                  className={`
-                    inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs
-                    font-medium shadow-sm
-                    ${INTENT_HINTS[intent.type].color}
-                    ${isGarbage ? 'animate-pulse' : ''}
-                  `}
-                >
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium shadow-card ${INTENT_HINTS[intent.type].color}`}>
                   <span>{INTENT_HINTS[intent.type].icon}</span>
                   <span>{INTENT_HINTS[intent.type].label}</span>
                 </span>
               )}
 
-              {/* Confidence indicator */}
               {intent.type !== 'garbage' && intent.confidence > 0 && (
                 <span className="text-[10px] text-gray-400">
                   {Math.round(intent.confidence * 100)}% confident

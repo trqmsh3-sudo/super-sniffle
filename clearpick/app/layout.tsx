@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import Navbar from '@/components/Navbar';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -11,11 +12,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'ClearPick.ai — AI-Powered Product Research',
   description:
-    'Find any product instantly. AI-powered research across every brand and model — unbiased scores, real reviews, and honest recommendations.',
+    'Find the best product instantly. AI-powered research across brands, models and real reviews — unbiased scores and honest recommendations.',
   openGraph: {
     title: 'ClearPick.ai — AI-Powered Product Research',
     description:
-      'Find any product instantly. AI-powered research across every brand and model.',
+      'Find the best product instantly. AI-powered research across brands, models and real reviews.',
     type: 'website',
     siteName: 'ClearPick.ai',
   },
@@ -33,7 +34,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-white antialiased">{children}</body>
+      <body className="min-h-screen bg-surface-bg antialiased">
+        <Navbar />
+        {children}
+      </body>
     </html>
   );
 }

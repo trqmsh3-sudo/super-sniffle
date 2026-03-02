@@ -1,6 +1,6 @@
 // =============================================================================
-// ClearPick.ai — Brand Hero Component (Dark Theme)
-// Gradient from brandColor → #0a0a0a, left-aligned, min-h 280px
+// ClearPick.ai — Brand Hero Component (Light Design System)
+// Gradient from subtle brandColor → white, left-aligned, min-h 220px
 // =============================================================================
 
 'use client';
@@ -48,25 +48,19 @@ export default function BrandHero({
 
   return (
     <section
-      className="relative min-h-[280px] overflow-hidden"
+      className="relative min-h-[220px] overflow-hidden border-b border-surface-border"
       style={{
-        background: `linear-gradient(135deg, ${primaryColor} 0%, #0a0a0a 60%)`,
+        background: `linear-gradient(135deg, ${primaryColor}15 0%, #F8FAFC 60%)`,
       }}
     >
-      {/* Bottom fade to site background */}
-      <div
-        className="absolute inset-x-0 bottom-0 h-20"
-        style={{ background: 'linear-gradient(to top, #0a0a0a, transparent)' }}
-      />
-
       {/* ── Content ────────────────────────────────────────────────────── */}
       <div
-        className={`relative mx-auto flex max-w-6xl items-center gap-6 px-6 py-14 transition-all duration-700 ease-out md:py-20 ${
+        className={`relative mx-auto flex max-w-content items-center gap-6 px-6 py-12 transition-all duration-700 ease-out md:py-16 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}
       >
         {/* Logo — white bg, rounded-xl, shadow */}
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-xl md:h-24 md:w-24">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-surface-border bg-white p-2 shadow-card md:h-24 md:w-24">
           <Image
             src={logo}
             alt={`${name} logo`}
@@ -93,7 +87,7 @@ export default function BrandHero({
         {/* Text Content */}
         <div className="min-w-0 flex-1">
           {/* Brand Name */}
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
             {name}
           </h1>
 
@@ -122,10 +116,10 @@ export default function BrandHero({
 function Pill({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-sm ${
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${
         muted
-          ? 'bg-white/10 text-white/60'
-          : 'bg-white/20 uppercase tracking-wider text-white'
+          ? 'bg-gray-100 text-gray-500'
+          : 'bg-primary-50 uppercase tracking-wider text-primary-800'
       }`}
     >
       {children}

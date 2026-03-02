@@ -105,10 +105,9 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
   return (
     <main
-      className="min-h-screen"
+      className="min-h-screen bg-surface-bg"
       style={
         {
-          backgroundColor: '#0a0a0a',
           '--brand-primary': brand.primaryColor,
           '--brand-secondary': brand.secondaryColor,
           '--brand-primary-10': `${brand.primaryColor}1A`,
@@ -157,14 +156,14 @@ export default async function BrandPage({ params }: BrandPageProps) {
       <RelatedBrands currentSlug={slug} category={brand.category} />
 
       {/* ── Footer Accent ────────────────────────────────────────────────── */}
-      <footer className="border-t px-6 py-10 text-center" style={{ borderColor: '#222' }}>
-        <p className="text-sm text-white/40">
+      <footer className="border-t border-surface-border bg-white px-6 py-10 text-center">
+        <p className="text-sm text-gray-400">
           Product data powered by{' '}
           <span className="font-semibold" style={{ color: brand.primaryColor }}>
             ClearPick.ai
           </span>
         </p>
-        <p className="mt-1 text-xs text-white/25">
+        <p className="mt-1 text-xs text-gray-300">
           Prices and availability may vary. Last updated every 24 hours.
         </p>
       </footer>
