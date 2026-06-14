@@ -30,12 +30,139 @@ export interface RedditSearchResult {
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+async function getRedditAccessToken(clientId: string, clientSecret: string): Promise<string | null> {
+  try {
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const response = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'clearpick-ai:v1.0.0 (by /u/clearpick_dev)',
+      },
+      body: 'grant_type=client_credentials',
+      signal: AbortSignal.timeout(6000),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.access_token;
+    } else {
+      console.warn(`[RedditSearch] Access token response failed: ${response.status} ${response.statusText}`);
+    }
+  } catch (err) {
+    console.error('[RedditSearch] Failed to get Reddit access token:', err);
+  }
+  return null;
+}
+
+async function searchRedditOfficial(productName: string, accessToken: string): Promise<RedditSearchResult> {
+  const query = productName;
+  const searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(query)}&limit=8`;
+  
+  const response = await fetch(searchUrl, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'User-Agent': 'clearpick-ai:v1.0.0 (by /u/clearpick_dev)',
+    },
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Reddit API search failed: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const posts = data?.data?.children ?? [];
+  const targetPosts = posts.slice(0, 2);
+
+  const enrichedThreads: RedditThreadResult[] = [];
+  let totalComments = 0;
+  const combinedTextParts: string[] = [];
+
+  for (const post of targetPosts) {
+    const permalink = post.data.permalink;
+    const threadUrl = `https://www.reddit.com${permalink}`;
+    const commentApiUrl = `https://oauth.reddit.com${permalink}?limit=30`;
+
+    try {
+      const commentResponse = await fetch(commentApiUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'User-Agent': 'clearpick-ai:v1.0.0 (by /u/clearpick_dev)',
+        },
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (commentResponse.ok) {
+        const commentData = await commentResponse.json();
+        const rawComments = commentData[1]?.data?.children ?? [];
+        const comments: RedditComment[] = [];
+
+        for (const c of rawComments) {
+          if (c.kind === 't1') {
+            const author = c.data.author || 'Anonymous';
+            const body = c.data.body || '';
+            const score = c.data.score ?? 0;
+
+            if (body.length > 10 && !author.toLowerCase().includes('bot') && author.toLowerCase() !== 'automoderator') {
+              comments.push({ author, body, score });
+            }
+          }
+        }
+
+        enrichedThreads.push({
+          title: post.data.title || 'Reddit Thread',
+          url: threadUrl,
+          snippet: '',
+          comments,
+        });
+
+        totalComments += comments.length;
+        combinedTextParts.push(`Thread Title: ${post.data.title}`);
+        for (const c of comments) {
+          combinedTextParts.push(`Comment by ${c.author} (Score: ${c.score}): ${c.body}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[RedditSearch] Official API comment fetch failed for ${threadUrl}:`, err);
+    }
+  }
+
+  const lowData = totalComments < 15;
+  return {
+    query: productName,
+    threads: enrichedThreads,
+    allCommentsText: combinedTextParts.join('\n\n'),
+    commentCount: totalComments,
+    lowData,
+  };
+}
+
 /**
  * Searches Reddit and retrieves thread details + comments using Playwright.
  * If Playwright fails or isn't available, falls back to direct API and search feeds.
  */
 export async function searchReddit(productName: string): Promise<RedditSearchResult> {
   console.log(`[RedditSearch] Initiating search for: "${productName}"`);
+  
+  // ── Step 0: Try Official Reddit API (Most Stable & Cloud-Safe) ──
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+
+  if (clientId && clientSecret && clientId !== 'your_reddit_client_id' && clientSecret !== 'your_reddit_client_secret') {
+    console.log('[RedditSearch] Official Reddit API credentials detected. Fetching via OAuth...');
+    const token = await getRedditAccessToken(clientId, clientSecret);
+    if (token) {
+      try {
+        const result = await searchRedditOfficial(productName, token);
+        console.log(`[RedditSearch] Official Reddit API search succeeded. Scraped ${result.commentCount} comments.`);
+        return result;
+      } catch (officialErr) {
+        console.error('[RedditSearch] Official Reddit API search failed, trying scrapers:', officialErr);
+      }
+    }
+  }
   
   // ── Step 1: Try Playwright Direct Scraping (Most Reliable & Captcha Resistant) ──
   try {
