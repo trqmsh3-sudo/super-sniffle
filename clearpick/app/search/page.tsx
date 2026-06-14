@@ -218,14 +218,20 @@ function SearchDashboardContent() {
                     {data.productName}
                   </h1>
                   <p className="text-gray-400 text-xs sm:text-sm mt-1">
-                    {t.remarksCount.replace('{count}', String(data.commentCount)).replace('{threads}', String(data.threads.length))}
+                    {data.commentCount === 0
+                      ? t.remarksFallback
+                      : t.remarksCount.replace('{count}', String(data.commentCount)).replace('{threads}', String(data.threads.length))}
                   </p>
                 </div>
-                {data.lowData && (
+                {data.commentCount === 0 ? (
+                  <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg px-3 py-1.5 text-xs font-semibold self-start sm:self-center">
+                    🤖 {t.aiConsensus}
+                  </div>
+                ) : data.lowData ? (
                   <div className="inline-flex items-center gap-2 bg-amber-500/10 text-[#F5C842] border border-amber-500/20 rounded-lg px-3 py-1.5 text-xs font-semibold self-start sm:self-center">
                     ⚠️ {t.lowDataWarning}
                   </div>
-                )}
+                ) : null}
               </div>
 
               {/* Grid: Left: Score circle / warning, Right: Pros & Cons */}
@@ -239,54 +245,95 @@ function SearchDashboardContent() {
                     {t.unsponsoredScore}
                   </h3>
 
-                  {data.lowData ? (
+                  {data.commentCount === 0 ? (
+                    <div className="flex flex-col items-center">
+                      <div className="relative flex items-center justify-center mb-4">
+                        {/* Radial Progress Ring */}
+                        <svg className="w-32 h-32 transform -rotate-90">
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="54"
+                            stroke="rgba(255,255,255,0.05)"
+                            strokeWidth="8"
+                            fill="transparent"
+                          />
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="54"
+                            stroke="#F5C842"
+                            strokeWidth="8"
+                            fill="transparent"
+                            strokeDasharray={2 * Math.PI * 54}
+                            strokeDashoffset={2 * Math.PI * 54 * (1 - data.unsponsoredScore / 100)}
+                            strokeLinecap="round"
+                            className="transition-all duration-1000 ease-out"
+                          />
+                        </svg>
+                        {/* Score display inside circle */}
+                        <div className="absolute flex flex-col items-center justify-center">
+                          <span className="text-3xl font-extrabold text-white leading-none">
+                            {data.unsponsoredScore}%
+                          </span>
+                          <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">
+                            {t.unbiasedLabel}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-500 leading-relaxed max-w-[220px] text-center mb-4">
+                        {t.aiConsensusDesc}
+                      </p>
+                    </div>
+                  ) : data.lowData ? (
                     <div className="py-6 flex flex-col items-center">
                       <div className="text-amber-500 text-3xl mb-2">🤷‍♂️</div>
                       <span className="text-[#F5C842] text-xl font-bold">N/A</span>
-                      <p className="text-xs text-gray-500 max-w-[200px] mt-2 leading-relaxed">
+                      <p className="text-xs text-gray-500 max-w-[200px] mt-2 leading-relaxed mb-4">
                         {t.lowDataDesc}
                       </p>
                     </div>
                   ) : (
-                    <div className="relative flex items-center justify-center mb-4">
-                      {/* Radial Progress Ring */}
-                      <svg className="w-32 h-32 transform -rotate-90">
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="54"
-                          stroke="rgba(255,255,255,0.05)"
-                          strokeWidth="8"
-                          fill="transparent"
-                        />
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="54"
-                          stroke="#F5C842"
-                          strokeWidth="8"
-                          fill="transparent"
-                          strokeDasharray={2 * Math.PI * 54}
-                          strokeDashoffset={2 * Math.PI * 54 * (1 - data.unsponsoredScore / 100)}
-                          strokeLinecap="round"
-                          className="transition-all duration-1000 ease-out"
-                        />
-                      </svg>
-                      {/* Score display inside circle */}
-                      <div className="absolute flex flex-col items-center justify-center">
-                        <span className="text-3xl font-extrabold text-white leading-none">
-                          {data.unsponsoredScore}%
-                        </span>
-                        <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">
-                          {t.unbiasedLabel}
-                        </span>
+                    <div className="flex flex-col items-center">
+                      <div className="relative flex items-center justify-center mb-4">
+                        {/* Radial Progress Ring */}
+                        <svg className="w-32 h-32 transform -rotate-90">
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="54"
+                            stroke="rgba(255,255,255,0.05)"
+                            strokeWidth="8"
+                            fill="transparent"
+                          />
+                          <circle
+                            cx="64"
+                            cy="64"
+                            r="54"
+                            stroke="#F5C842"
+                            strokeWidth="8"
+                            fill="transparent"
+                            strokeDasharray={2 * Math.PI * 54}
+                            strokeDashoffset={2 * Math.PI * 54 * (1 - data.unsponsoredScore / 100)}
+                            strokeLinecap="round"
+                            className="transition-all duration-1000 ease-out"
+                          />
+                        </svg>
+                        {/* Score display inside circle */}
+                        <div className="absolute flex flex-col items-center justify-center">
+                          <span className="text-3xl font-extrabold text-white leading-none">
+                            {data.unsponsoredScore}%
+                          </span>
+                          <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">
+                            {t.unbiasedLabel}
+                          </span>
+                        </div>
                       </div>
+                      <p className="text-[11px] text-gray-500 leading-relaxed max-w-[220px] text-center mb-4">
+                        {t.scoreDesc}
+                      </p>
                     </div>
                   )}
-
-                  <p className="text-[11px] text-gray-500 leading-relaxed max-w-[220px]">
-                    {t.scoreDesc}
-                  </p>
                 </div>
 
                 {/* Pros and Cons Card */}
