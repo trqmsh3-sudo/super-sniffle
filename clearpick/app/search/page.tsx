@@ -38,7 +38,7 @@ function SearchDashboardContent() {
 
   const SUPPORTED_LANGUAGES: Language[] = ['he', 'en', 'ar', 'es', 'ru', 'fr', 'de', 'zh', 'hi'];
 
-  // Sync language with search parameters or localStorage
+  // Sync language with search parameters or localStorage with browser language detection
   useEffect(() => {
     if (SUPPORTED_LANGUAGES.includes(langParam)) {
       setLang(langParam);
@@ -47,6 +47,14 @@ function SearchDashboardContent() {
       const saved = localStorage.getItem('cp_lang') as Language;
       if (SUPPORTED_LANGUAGES.includes(saved)) {
         setLang(saved);
+      } else {
+        // Automatic browser language detection
+        const browserLang = navigator.language.split('-')[0] as Language;
+        if (SUPPORTED_LANGUAGES.includes(browserLang)) {
+          setLang(browserLang);
+        } else {
+          setLang('he');
+        }
       }
     }
     setIsReady(true);

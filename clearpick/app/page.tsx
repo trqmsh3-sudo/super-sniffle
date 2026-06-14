@@ -60,7 +60,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const langParam = searchParams.get('l') as Language;
 
-  // Load language preference
+  // Load language preference with automatic browser language detection
   useEffect(() => {
     if (SUPPORTED_LANGUAGES.includes(langParam)) {
       setLang(langParam);
@@ -69,6 +69,14 @@ function HomeContent() {
       const saved = localStorage.getItem('cp_lang') as Language;
       if (SUPPORTED_LANGUAGES.includes(saved)) {
         setLang(saved);
+      } else {
+        // Automatic browser language detection
+        const browserLang = navigator.language.split('-')[0] as Language;
+        if (SUPPORTED_LANGUAGES.includes(browserLang)) {
+          setLang(browserLang);
+        } else {
+          setLang('he'); // Default fallback to Hebrew
+        }
       }
     }
   }, [langParam]);
