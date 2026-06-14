@@ -29,7 +29,7 @@ function SearchDashboardContent() {
   const query = searchParams.get('q') ?? '';
   const langParam = searchParams.get('l') as Language;
 
-  const [lang, setLang] = useState<Language>('he');
+  const [lang, setLang] = useState<Language>('en');
   const [isReady, setIsReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalysisResponse | null>(null);
@@ -53,7 +53,7 @@ function SearchDashboardContent() {
         if (SUPPORTED_LANGUAGES.includes(browserLang)) {
           setLang(browserLang);
         } else {
-          setLang('he');
+          setLang('en'); // Default fallback to English
         }
       }
     }

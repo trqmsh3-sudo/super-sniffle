@@ -54,7 +54,7 @@ const formatTitle = (titleText: string) => {
 
 function HomeContent() {
   const [query, setQuery] = useState('');
-  const [lang, setLang] = useState<Language>('he');
+  const [lang, setLang] = useState<Language>('en');
   const [activeModal, setActiveModal] = useState<null | 'terms' | 'privacy' | 'disclosure'>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -75,7 +75,7 @@ function HomeContent() {
         if (SUPPORTED_LANGUAGES.includes(browserLang)) {
           setLang(browserLang);
         } else {
-          setLang('he'); // Default fallback to Hebrew
+          setLang('en'); // Default fallback to English
         }
       }
     }
