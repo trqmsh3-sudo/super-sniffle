@@ -51,20 +51,18 @@ function getRedis(): Redis | null {
   if (!redis) {
     try {
       redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
-        maxRetriesPerRequest: 1,
+        maxRetriesPerRequest: 0,
         lazyConnect: true,
-        connectTimeout: 3000,
-        retryStrategy(times) {
-          if (times > 2) {
-            // Stop retrying — enter no-cache mode
-            redisUnavailable = true;
-            if (!redisErrorLogged) {
-              console.warn('[ClearPick Cache] Redis unavailable — running in no-cache mode.');
-              redisErrorLogged = true;
-            }
-            return null;
+        connectTimeout: 1000,
+        enableOfflineQueue: false,
+        retryStrategy() {
+          // Never retry — enter no-cache mode immediately
+          redisUnavailable = true;
+          if (!redisErrorLogged) {
+            console.warn('[ClearPick Cache] Redis unavailable — running in no-cache mode.');
+            redisErrorLogged = true;
           }
-          return Math.min(times * 200, 1000);
+          return null;
         },
       });
 

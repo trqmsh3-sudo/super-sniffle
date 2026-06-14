@@ -1,11 +1,11 @@
 // =============================================================================
 // ClearPick.ai — Search API Route
 // GET /api/search?q=query
-// Uses Gemini + Google Search grounding for real-time product search
+// Uses Groq llama-3.3-70b-versatile for product search
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import {
   getCachedSearch,
   getCachedSearchRaw,
@@ -13,8 +13,7 @@ import {
   type SearchResult,
 } from '@/lib/searchCache';
 
-// Model priority: try models with highest free-tier quota first
-const MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'] as const;
+const MODEL_NAME = 'llama-3.3-70b-versatile';
 const CURRENT_YEAR = new Date().getFullYear();
 
 export async function GET(request: NextRequest) {
@@ -27,11 +26,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // ── 1. Check cache ────────────────────────────────────────────────────────
+  // ── 1. Check cache (Redis is optional — failures are silently skipped) ────
 
-  const rawCached = await getCachedSearchRaw(query);
+  let rawCached = null;
+  let cached = null;
+  try {
+    rawCached = await getCachedSearchRaw(query);
+    cached = await getCachedSearch(query);
+  } catch {
+    // Redis unavailable — proceed without cache
+  }
   const isFlagged = rawCached?.flagged === true;
-  const cached = await getCachedSearch(query);
 
   if (cached && !isFlagged) {
     return NextResponse.json({
@@ -43,10 +48,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // ── 2. Search via Gemini + Google Search grounding ────────────────────────
+  // ── 2. Search via Groq ────────────────────────────────────────────────────
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_key_here') {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || apiKey === 'your_groq_key_here') {
     return NextResponse.json(
       { error: 'Search service not configured.', results: [] },
       { status: 503 },
@@ -54,11 +59,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const groq = new Groq({ apiKey });
 
-    const prompt = `Search the web for: "${query}"
+    const prompt = `Search your knowledge for: "${query}"
 
-Find 10-20 real products matching this search query. Look at shopping sites, review sites (TechRadar, PCMag, CNET, The Verge, rtings, Tom's Guide), and retailer pages (Amazon, Best Buy, B&H Photo).
+Find 10-20 real products matching this search query. Use your knowledge of shopping sites, review sites (TechRadar, PCMag, CNET, The Verge, rtings, Tom's Guide), and retailers (Amazon, Best Buy, B&H Photo).
 
 Return a JSON array only. Each product must have ALL these fields:
 - id: a unique short identifier (lowercase, no spaces)
@@ -67,43 +72,22 @@ Return a JSON array only. Each product must have ALL these fields:
 - currency: "USD"
 - rating: score out of 5 stars (e.g. 4.5). Use 0 if unknown.
 - source: name of the review/shopping site (e.g. "TechRadar", "Amazon")
-- url: direct URL to the product page or review
+- url: direct URL to the product page or review (or empty string if unknown)
 - snippet: 1-2 sentence description of the product
-- image: direct image URL if found, or empty string
+- image: direct image URL if known, or empty string
 
-Important: Return REAL products with REAL prices from ${CURRENT_YEAR} or recent years. 
+Important: Return REAL products with REAL prices from ${CURRENT_YEAR} or recent years.
 No markdown fences, no explanation — ONLY the JSON array.`;
 
-    console.log(`[Search API] Gemini+GoogleSearch query: "${query}"`);
+    console.log(`[Search API] Groq query: "${query}"`);
 
-    // Try each model in priority order; fallback on 429 / quota errors
-    let text = '';
-    let lastErr: unknown;
-    for (const modelName of MODELS) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          tools: [{ googleSearch: {} } as never],
-        });
-        console.log(`[Search API] Trying model: ${modelName}`);
-        const result = await model.generateContent(prompt);
-        text = result.response.text().trim();
-        lastErr = null;
-        break;
-      } catch (e) {
-        lastErr = e;
-        const msg = e instanceof Error ? e.message : String(e);
-        console.warn(`[Search API] Model ${modelName} failed: ${msg.slice(0, 200)}`);
-        // If it's a quota/rate-limit error, try the next model
-        if (msg.includes('429') || msg.includes('quota') || msg.includes('rate')) {
-          continue;
-        }
-        // For other errors, wait 1s then try next model
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-    }
+    const completion = await groq.chat.completions.create({
+      model: MODEL_NAME,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+    });
 
-    if (lastErr && !text) throw lastErr;
+    let text = completion.choices[0]?.message?.content?.trim() ?? '';
 
     // Robust JSON extraction — find the outermost [ ... ]
     let jsonStr = text;
@@ -133,7 +117,7 @@ No markdown fences, no explanation — ONLY the JSON array.`;
     }
 
     if (!Array.isArray(parsed)) {
-      console.warn('[Search API] Gemini returned non-array:', typeof parsed);
+      console.warn('[Search API] Groq returned non-array:', typeof parsed);
       return NextResponse.json(
         { error: 'Search returned unexpected format.', results: [] },
         { status: 500 },
@@ -165,8 +149,12 @@ No markdown fences, no explanation — ONLY the JSON array.`;
 
     console.log(`[Search API] Found ${results.length} products for "${query}"`);
 
-    // ── 3. Cache the results ──────────────────────────────────────────────
-    await setCachedSearch(query, results);
+    // ── 3. Cache the results (optional — skip if Redis unavailable) ──────
+    try {
+      await setCachedSearch(query, results);
+    } catch {
+      // no-op
+    }
 
     return NextResponse.json({
       results,
@@ -176,7 +164,7 @@ No markdown fences, no explanation — ONLY the JSON array.`;
       totalRatings: 0,
     });
   } catch (err) {
-    console.error('[Search API] Gemini search error:', err);
+    console.error('[Search API] Groq search error:', err);
 
     // Return stale cache if available
     if (rawCached) {

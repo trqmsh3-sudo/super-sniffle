@@ -28,3 +28,7 @@ Thumbs.db
 .vercel/
 .vercel
 .env*.local
+
+# Design & Temporary Mockups
+zxc/
+stitch-designs/

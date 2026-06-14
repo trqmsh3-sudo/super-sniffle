@@ -1,29 +1,21 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
-import Navbar from '@/components/Navbar';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
-  title: 'ClearPick.ai — AI-Powered Product Research',
+  title: 'ClearPick.ai — Stop Guessing. Start Knowing.',
   description:
-    'Find the best product instantly. AI-powered research across brands, models and real reviews — unbiased scores and honest recommendations.',
+    'AI-powered product research across 50+ trusted sources. Honest scores, real reviews, no affiliate spin.',
   openGraph: {
-    title: 'ClearPick.ai — AI-Powered Product Research',
+    title: 'ClearPick.ai — Stop Guessing. Start Knowing.',
     description:
-      'Find the best product instantly. AI-powered research across brands, models and real reviews.',
+      'AI-powered product research across 50+ trusted sources. Honest scores, real reviews.',
     type: 'website',
     siteName: 'ClearPick.ai',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'ClearPick.ai',
-    description: 'AI-powered product research — honest scores and real reviews.',
+    description: 'Stop guessing. Start knowing. AI-powered product research.',
   },
 };
 
@@ -33,9 +25,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-surface-bg antialiased">
-        <Navbar />
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://api.fontshare.com" />
+        <link
+          href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500,400&f[]=satoshi@700,500,400&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-screen antialiased bg-[#0A0A0F] text-white">
         {children}
       </body>
     </html>

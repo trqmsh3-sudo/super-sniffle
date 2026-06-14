@@ -2,112 +2,764 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ClearPick.ai — Design System
-   Primary: #1E3A8A  ·  Accent: #3B82F6  ·  BG: #F8FAFC
+   See BRAND.md for full brand identity guidelines
+   Background: #0A0A0F · Primary: #F5C842 · Surface: #141418
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --brand-primary: #1E3A8A;
-  --brand-secondary: #3B82F6;
-  --foreground: #0F172A;
-  --background: #F8FAFC;
-  --surface: #FFFFFF;
-  --border: #E2E8F0;
-  --muted: #64748B;
-  --radius: 14px;
-}
+  /* Core palette */
+  --bg:           #0A0A0F;
+  --primary:      #F5C842;
+  --primary-dark: #D4A820;
+  --surface:      #141418;
+  --surface-2:    #1C1C22;
+  --border:       #2A2A35;
+  --border-light: #3A3A48;
 
-/* ── Dark mode vars ──────────────────────────────────────────────────────── */
-.dark {
-  --foreground: #F1F5F9;
-  --background: #0B1120;
-  --surface: #1E293B;
-  --border: #334155;
-  --muted: #94A3B8;
+  /* Text */
+  --text:         #FFFFFF;
+  --text-muted:   #9999AA;
+  --text-faint:   #55556A;
+
+  /* Semantic */
+  --success:      #22C55E;
+  --warning:      #F59E0B;
+  --error:        #EF4444;
+
+  /* Layout */
+  --radius:       12px;
+  --radius-lg:    20px;
+  --radius-sm:    8px;
+
+  /* Backward-compat aliases for existing components */
+  --brand-primary:   #F5C842;
+  --brand-secondary: #D4A820;
+  --foreground:      #FFFFFF;
+  --background:      #0A0A0F;
+  --muted:           #9999AA;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-family: 'Satoshi', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* ── Typography Scale ────────────────────────────────────────────────────── */
-
-h1 { font-size: 3rem; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
-h2 { font-size: 2rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
-h3 { font-size: 1.5rem; line-height: 1.3; font-weight: 600; }
-
-@media (max-width: 640px) {
-  h1 { font-size: 1.75rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
-}
-
-/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
-
-.shimmer {
-  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-.dark .shimmer {
-  background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%);
-  background-size: 200% 100%;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-/* ── Smooth scroll ───────────────────────────────────────────────────────── */
-
-html {
-  scroll-behavior: smooth;
 }
 
 /* ── Focus ring ──────────────────────────────────────────────────────────── */
 
 :focus-visible {
-  outline: 2px solid #3B82F6;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* ── Mobile tap target ───────────────────────────────────────────────────── */
+/* ── Tap targets ─────────────────────────────────────────────────────────── */
 
-button, a, [role="button"] {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-/* Exception for inline text links */
-p a, span a { min-height: auto; min-width: auto; }
+button, a, [role="button"] { min-height: 44px; min-width: 44px; }
+p a, span a             { min-height: auto; min-width: auto; }
 
 /* ── Scrollbar ───────────────────────────────────────────────────────────── */
 
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar       { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+::-webkit-scrollbar-thumb { background: #2A2A35; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3A3A48; }
 
-/* ── Glass effect ────────────────────────────────────────────────────────── */
+/* ── Shimmer skeleton ────────────────────────────────────────────────────── */
+
+.shimmer {
+  background: linear-gradient(90deg, #1C1C22 25%, #2A2A35 50%, #1C1C22 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
 
 .glass {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(20, 20, 24, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-.dark .glass {
-  background: rgba(15, 23, 42, 0.8);
+.font-heading { font-family: 'Cabinet Grotesk', system-ui, sans-serif; }
+.font-body    { font-family: 'Satoshi',          system-ui, sans-serif; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAVBAR — dark override
+   Forces the existing Navbar component into the dark theme
+   without touching Navbar.tsx
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+nav {
+  background: rgba(10, 10, 15, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+/* Logo: "Clear" → white, "Pick" → gold, ".ai" → muted */
+nav a[href="/"] {
+  color: var(--text) !important;
+}
+nav a[href="/"] span:nth-child(1) {
+  color: var(--primary) !important;
+}
+nav a[href="/"] span:nth-child(2) {
+  color: var(--text-faint) !important;
+}
+
+/* Nav links and buttons */
+nav a:not([href="/"]),
+nav button {
+  color: var(--text-muted) !important;
+}
+nav a:not([href="/"]):hover,
+nav button:hover {
+  color: var(--text) !important;
+  background: var(--surface) !important;
+}
+
+/* Dropdown panel */
+nav .bg-white {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+}
+nav .text-gray-700 { color: var(--text-muted) !important; }
+nav .hover\:bg-primary-50:hover { background: var(--surface) !important; }
+nav .hover\:text-primary-700:hover { color: var(--text) !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOMEPAGE — cp-* design system
+   All homepage styles live here. page.tsx uses only class names.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page shell ── */
+
+.cp-page {
+  position: relative;
+  min-height: 100vh;
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+/* ── Film grain overlay ── */
+/* Creates cinematic depth and premium texture */
+
+.cp-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: overlay;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cp-hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 1.5rem 4rem;
+  text-align: center;
+  isolation: isolate;
+}
+
+/* Atmospheric gold glow — breathes life into the dark background */
+.cp-hero::before {
+  content: '';
+  position: absolute;
+  top: -8%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1000px, 140vw);
+  height: 680px;
+  background: radial-gradient(
+    ellipse at 50% 25%,
+    rgba(245, 200, 66, 0.07) 0%,
+    rgba(245, 200, 66, 0.025) 40%,
+    transparent 68%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Fade to nothing at the bottom of the hero */
+.cp-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
+}
+
+/* ── Hero inner content ── */
+/* Staggered entrance: everything rises up together */
+
+.cp-hero-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  animation: cp-rise 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Eyebrow status pill ── */
+
+.cp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 2rem;
+  padding: 0.4rem 1rem 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(20, 20, 24, 0.9);
+  backdrop-filter: blur(8px);
+  min-height: unset;          /* reset tap-target override */
+}
+
+/* Pulsing live indicator dot */
+.cp-eyebrow-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 0 rgba(245, 200, 66, 0.5);
+  animation: cp-pulse 2.8s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── Headline ── */
+
+.cp-headline {
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+  font-size: clamp(2.75rem, 7.5vw, 5.25rem);
+  font-weight: 800;
+  letter-spacing: -0.038em;
+  line-height: 1.0;
+  color: var(--text);
+  margin: 0 0 1.5rem;
+  max-width: 15ch;
+}
+
+/* "Start knowing." — italic em tag becomes gold */
+.cp-headline em {
+  font-style: normal;
+  color: var(--primary);
+}
+
+/* ── Subline ── */
+
+.cp-subline {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: clamp(0.9375rem, 2.2vw, 1.0625rem);
+  line-height: 1.65;
+  color: var(--text-muted);
+  margin: 0 0 2.75rem;
+  max-width: 46ch;
+}
+
+/* Desktop-only line break in subline */
+.cp-br-desktop {
+  display: none;
+}
+@media (min-width: 640px) {
+  .cp-br-desktop { display: block; }
+}
+
+/* ── Search wrapper ── */
+
+.cp-search-outer {
+  position: relative;
+  width: 100%;
+  max-width: 648px;
+  margin-bottom: 1.25rem;
+  z-index: 2;
+}
+
+/* Soft gold aura behind the search bar */
+.cp-search-outer::before {
+  content: '';
+  position: absolute;
+  inset: -16px -24px;
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    rgba(245, 200, 66, 0.06) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ── SearchBar component style overrides ── */
+/* All API/routing logic in SearchBar.tsx is untouched.
+   Only visual appearance is overridden below.             */
+
+.cp-search-outer input {
+  background: var(--surface) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text) !important;
+  font-family: 'Satoshi', system-ui, sans-serif !important;
+  font-size: 1rem !important;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+.cp-search-outer input::placeholder {
+  color: var(--text-faint) !important;
+}
+
+.cp-search-outer input:focus {
+  border-color: var(--primary) !important;
+  box-shadow:
+    0 0 0 3px rgba(245, 200, 66, 0.12),
+    0 4px 32px rgba(245, 200, 66, 0.08),
+    0 2px 12px rgba(0, 0, 0, 0.35) !important;
+  outline: none !important;
+}
+
+/* Search icons */
+.cp-search-outer form > div svg,
+.cp-search-outer form > div > svg {
+  color: var(--text-faint) !important;
+}
+
+/* Submit arrow button */
+.cp-search-outer button[type="submit"] {
+  color: var(--text-faint) !important;
+  min-height: unset;
+  min-width: unset;
+}
+.cp-search-outer button[type="submit"]:hover {
+  color: var(--primary) !important;
+}
+
+/* Intent hint pills that appear below the search bar */
+.cp-search-outer .bg-primary-50 {
+  background: rgba(245, 200, 66, 0.08) !important;
+  border-color: rgba(245, 200, 66, 0.2) !important;
+  color: var(--primary) !important;
+}
+.cp-search-outer .bg-white {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ── Hint text below search ── */
+
+.cp-search-hint {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  color: var(--text-faint);
+  line-height: 1.6;
+  animation: cp-rise 1s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  min-height: unset;
+}
+
+.cp-search-hint em {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* ── Scroll indicator ── */
+
+.cp-scroll-cue {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+  animation: cp-rise 1s 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cp-scroll-line {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+/* The golden drop that drips down the scroll line */
+.cp-scroll-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--primary), transparent);
+  animation: cp-drip 2.2s ease-in-out 1.5s infinite;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRUST STRIP
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cp-trust {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 2.75rem 1.5rem;
+}
+
+.cp-trust-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 3rem;
+  text-align: center;
+}
+
+/* Vertical rule between items */
+.cp-trust-item + .cp-trust-item {
+  border-left: 1px solid var(--border);
+}
+
+.cp-trust-val {
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.cp-trust-lbl {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 520px) {
+  .cp-trust-item           { padding: 0.5rem 1.5rem; }
+  .cp-trust-item + .cp-trust-item { border-left: none; border-top: 1px solid var(--border); }
+  .cp-trust                { flex-direction: column; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOURCE MARQUEE
+   Continuous auto-scroll. Pauses on hover.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cp-marquee {
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+  /* Fade edges to black for clean exit */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+}
+
+.cp-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: cp-marquee 28s linear infinite;
+}
+
+.cp-marquee:hover .cp-marquee-track {
+  animation-play-state: paused;
+}
+
+.cp-marquee-item {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 0 2.25rem;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  transition: color 0.2s;
+  min-height: unset;
+}
+
+.cp-marquee-item:hover {
+  color: var(--text-muted);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CATEGORIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cp-cats {
+  padding: 5.5rem 1.5rem 6rem;
+}
+
+.cp-cats-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Section label with flanking rules */
+.cp-section-label {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: center;
+  margin-bottom: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.cp-section-label::before,
+.cp-section-label::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  max-width: 80px;
+  background: linear-gradient(to right, transparent, var(--border));
+}
+.cp-section-label::after {
+  background: linear-gradient(to left, transparent, var(--border));
+}
+
+/* Responsive grid */
+.cp-cats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+@media (min-width: 500px) {
+  .cp-cats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 780px) {
+  .cp-cats-grid { grid-template-columns: repeat(5, 1fr); gap: 1rem; }
+}
+
+/* ── Category card ── */
+
+.cp-cat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 1.5rem 1rem 1.375rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-decoration: none;
+  overflow: hidden;
+  /* Spring-physics lift */
+  transition:
+    transform       0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color    0.2s  ease,
+    box-shadow      0.25s ease,
+    background      0.2s  ease;
+}
+
+/* Gold bloom that rises from below on hover */
+.cp-cat::after {
+  content: '';
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  height: 48px;
+  background: rgba(245, 200, 66, 0.18);
+  border-radius: 50%;
+  filter: blur(14px);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.cp-cat:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: rgba(245, 200, 66, 0.28);
+  background: var(--surface-2);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0  0   0 1px rgba(245, 200, 66, 0.06);
+}
+
+.cp-cat:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.cp-cat:active {
+  transform: translateY(-2px) scale(0.98);
+  transition-duration: 0.1s;
+}
+
+.cp-cat-icon {
+  font-size: 2rem;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cp-cat:hover .cp-cat-icon {
+  transform: scale(1.2) translateY(-2px);
+}
+
+.cp-cat-name {
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s;
+  min-height: unset;
+  min-width: unset;
+}
+
+.cp-cat:hover .cp-cat-name {
+  color: var(--text);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cp-footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  font-family: 'Satoshi', system-ui, sans-serif;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.cp-footer-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--border-light);
+  flex-shrink: 0;
+  min-height: unset;
+  min-width: unset;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Hero entrance — content rises up into place */
+@keyframes cp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Eyebrow pulse — live indicator dot */
+@keyframes cp-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0   rgba(245, 200, 66, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 200, 66, 0);
+  }
+}
+
+/* Source marquee — smooth left scroll */
+@keyframes cp-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Scroll drip — golden drop runs down the line */
+@keyframes cp-drip {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(100%);  opacity: 0; }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cp-hero-content,
+  .cp-search-hint,
+  .cp-scroll-cue,
+  .cp-eyebrow-pulse,
+  .cp-marquee-track,
+  .cp-scroll-line::after {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

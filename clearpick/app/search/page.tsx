@@ -1,513 +1,464 @@
 // =============================================================================
-// ClearPick.ai — Search Results Page (SaaS Redesign)
-// /search?q=query
-// FilterPanel sidebar · AIInsight · ProductCard grid · CompareBar · Comparison
+// ClearPick.ai — Search Results & Analysis Dashboard (MVP)
+// Renders the unsponsored score, pros, cons, quotes, and sources.
 // =============================================================================
 
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
-import { detectSearchIntent, type SearchIntent } from '@/lib/searchIntent';
-import SearchBar from '@/components/SearchBar';
-import ProductCard from '@/components/ProductCard';
-import AIInsight from '@/components/AIInsight';
-import FilterPanel, { DEFAULT_FILTERS, type FilterState } from '@/components/FilterPanel';
-import ComparisonTable, { CompareBar } from '@/components/ComparisonTable';
-import { VerifiedBadge, SourceLogos } from '@/components/TrustElements';
-import CacheBadge from '@/components/CacheBadge';
-import AccuracyRating from '@/components/AccuracyRating';
+import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { Language, translations } from '@/lib/translations';
+import FeedbackButton from '@/components/FeedbackButton';
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-interface SearchResultItem {
-  id: string;
-  title: string;
-  image?: string;
-  price?: number;
-  currency?: string;
-  rating?: number;
-  source?: string;
-  url?: string;
-  snippet?: string;
-}
-
-interface SearchResponse {
-  results: SearchResultItem[];
-  cacheStatus: 'cached' | 'fresh' | 'stale';
-  cachedAt: number | null;
-  averageAccuracy: number;
-  totalRatings: number;
+interface AnalysisResponse {
+  productName: string;
+  unsponsoredScore: number;
+  pros: string[];
+  cons: string[];
+  quotes: string[];
+  threads: { title: string; url: string }[];
+  commentCount: number;
+  lowData: boolean;
   error?: string;
 }
 
-// ── Product Card Skeleton ────────────────────────────────────────────────────
-
-function CardSkeleton() {
-  return (
-    <div className="rounded-card border border-surface-border bg-white p-5">
-      <div className="mb-4 flex items-start justify-between">
-        <div className="h-5 w-3/5 animate-pulse rounded-md bg-gray-100" />
-        <div className="h-9 w-9 animate-pulse rounded-xl bg-gray-100" />
-      </div>
-      <div className="mb-3 h-48 animate-pulse rounded-xl bg-gray-50" />
-      <div className="mb-3 space-y-2">
-        <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
-        <div className="h-3 w-4/5 animate-pulse rounded bg-gray-50" />
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="h-6 w-20 animate-pulse rounded-md bg-gray-100" />
-        <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-50" />
-      </div>
-    </div>
-  );
-}
-
-function SkeletonGrid() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <CardSkeleton key={i} />
-      ))}
-    </div>
-  );
-}
-
-// ── Garbage Query Message ────────────────────────────────────────────────────
-
-function GarbageMessage({ query }: { query: string }) {
-  return (
-    <div className="mx-auto max-w-lg text-center">
-      <div className="mb-4 text-5xl">🤔</div>
-      <h2 className="text-xl font-semibold text-gray-800">
-        We couldn&apos;t understand that search
-      </h2>
-      <p className="mt-2 text-gray-500">
-        &ldquo;{query}&rdquo; doesn&apos;t look like a product, brand, or category.
-      </p>
-      <p className="mt-4 text-sm text-gray-400">
-        Try searching for something like &ldquo;Sony headphones&rdquo;, &ldquo;Nike&rdquo;, or
-        &ldquo;wireless earbuds&rdquo;.
-      </p>
-    </div>
-  );
-}
-
-// ── Main Search Content ──────────────────────────────────────────────────────
-
-function SearchContent() {
+function SearchDashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') ?? '';
+  const langParam = searchParams.get('l') as Language;
 
-  const [intent, setIntent] = useState<SearchIntent | null>(null);
-  const [results, setResults] = useState<SearchResultItem[]>([]);
-  const [cacheStatus, setCacheStatus] = useState<'cached' | 'fresh' | 'stale'>('fresh');
-  const [cachedAt, setCachedAt] = useState<number | null>(null);
-  const [averageAccuracy, setAverageAccuracy] = useState(0);
-  const [totalRatings, setTotalRatings] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState<Language>('he');
+  const [isReady, setIsReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newQuery, setNewQuery] = useState(query);
 
-  // Filter / compare state
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [compareSet, setCompareSet] = useState<Set<string>>(new Set());
-  const [showComparison, setShowComparison] = useState(false);
+  const SUPPORTED_LANGUAGES: Language[] = ['he', 'en', 'ar', 'es', 'ru', 'fr', 'de', 'zh', 'hi'];
 
-  const comparisonRef = useRef<HTMLDivElement>(null);
-
-  // ── Intent detection + fetch ────────────────────────────────────────────
-
+  // Sync language with search parameters or localStorage
   useEffect(() => {
-    if (!query) return;
-
-    const detected = detectSearchIntent(query);
-    setIntent(detected);
-
-    if (detected.type === 'brand' && detected.slug) {
-      router.replace(`/brand/${detected.slug}`);
-      return;
+    if (SUPPORTED_LANGUAGES.includes(langParam)) {
+      setLang(langParam);
+      localStorage.setItem('cp_lang', langParam);
+    } else {
+      const saved = localStorage.getItem('cp_lang') as Language;
+      if (SUPPORTED_LANGUAGES.includes(saved)) {
+        setLang(saved);
+      }
     }
-    if (detected.type === 'garbage') return;
+    setIsReady(true);
+  }, [langParam]);
 
+  const changeLanguage = (next: Language) => {
+    setLang(next);
+    localStorage.setItem('cp_lang', next);
+    // Refresh search with updated language query param
+    router.push(`/search?q=${encodeURIComponent(query)}&l=${next}`);
+  };
+
+  const fetchAnalysis = async (searchQuery: string, currentLang: Language) => {
     setLoading(true);
     setError(null);
-    setCompareSet(new Set());
-    setShowComparison(false);
-    setFilters(DEFAULT_FILTERS);
-
-    fetch(`/api/search?q=${encodeURIComponent(query)}`)
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? 'Search failed');
-        }
-        return res.json() as Promise<SearchResponse>;
-      })
-      .then((data) => {
-        setResults(data.results);
-        setCacheStatus(data.cacheStatus);
-        setCachedAt(data.cachedAt);
-        setAverageAccuracy(data.averageAccuracy);
-        setTotalRatings(data.totalRatings);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Something went wrong.');
-      })
-      .finally(() => setLoading(false));
-  }, [query, router]);
-
-  // ── Derived: available brands ───────────────────────────────────────────
-
-  const availableBrands = useMemo(() => {
-    const set = new Set<string>();
-    results.forEach((r) => {
-      if (r.source) set.add(r.source);
-    });
-    return Array.from(set).sort();
-  }, [results]);
-
-  // ── Derived: filtered + sorted results ──────────────────────────────────
-
-  const filteredResults = useMemo(() => {
-    let items = [...results];
-
-    // Price filter
-    if (filters.priceMin > 0) {
-      items = items.filter((r) => (r.price ?? 0) >= filters.priceMin);
-    }
-    if (filters.priceMax < 10000) {
-      items = items.filter((r) => (r.price ?? 0) <= filters.priceMax);
-    }
-
-    // Brand (source) filter
-    if (filters.brands.length > 0) {
-      items = items.filter((r) => r.source && filters.brands.includes(r.source));
-    }
-
-    // Rating filter
-    if (filters.minRating > 0) {
-      items = items.filter((r) => {
-        const ratingOut10 = r.rating ? (r.rating > 5 ? r.rating : r.rating * 2) : 0;
-        return ratingOut10 >= filters.minRating;
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery, lang: currentLang }),
       });
-    }
 
-    // Sort
-    switch (filters.sort) {
-      case 'price-asc':
-        items.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-        break;
-      case 'price-desc':
-        items.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
-        break;
-      case 'rating':
-        items.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-        break;
-      default:
-        break;
-    }
-
-    return items;
-  }, [results, filters]);
-
-  // ── Comparison helpers ──────────────────────────────────────────────────
-
-  const toggleCompare = useCallback((name: string) => {
-    setCompareSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else if (next.size < 3) {
-        next.add(name);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error ?? 'Failed to analyze product reviews.');
       }
-      return next;
-    });
-  }, []);
 
-  const compareProducts = useMemo(
-    () =>
-      results
-        .filter((r) => compareSet.has(r.title))
-        .map((r) => ({
-          name: r.title,
-          price: r.price ? `$${r.price.toLocaleString()}` : undefined,
-          rating: r.rating ?? 0,
-          description: r.snippet,
-          source: r.source,
-          image: r.image,
-        })),
-    [results, compareSet],
-  );
+      const result = await response.json();
+      setData(result);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleViewCompare = useCallback(() => {
-    setShowComparison(true);
-    setTimeout(() => comparisonRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-  }, []);
+  useEffect(() => {
+    if (query && isReady) {
+      setNewQuery(query);
+      fetchAnalysis(query, lang);
+    }
+  }, [query, lang, isReady]);
 
-  // ── AI Insight derived data ─────────────────────────────────────────────
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newQuery.trim();
+    if (trimmed.length >= 2) {
+      router.push(`/search?q=${encodeURIComponent(trimmed)}&l=${lang}`);
+    }
+  };
 
-  const topProduct = results[0]?.title;
-  const priceRange = useMemo(() => {
-    const prices = results.filter((r) => r.price && r.price > 0).map((r) => r.price!);
-    if (prices.length < 2) return undefined;
-    return `$${Math.min(...prices).toLocaleString()} – $${Math.max(...prices).toLocaleString()}`;
-  }, [results]);
+  const t = translations[lang];
 
-  // ── Accuracy rating callback ────────────────────────────────────────────
+  // ── Render States ──────────────────────────────────────────────────────────
 
-  const handleRated = useCallback((newAvg: number) => {
-    setAverageAccuracy(newAvg);
-    setTotalRatings((prev) => prev + 1);
-  }, []);
-
-  // ── Empty state (no query) ──────────────────────────────────────────────
-
-  if (!query) {
+  if (error) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-8 px-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Clear<span className="text-accent">Pick</span>
-          </h1>
-          <p className="mt-2 text-gray-500">
-            AI-powered product search with accuracy ratings
-          </p>
+      <div 
+        className="cp-page min-h-screen bg-[#0A0A0F] text-white flex flex-col items-center justify-center p-6"
+        dir={lang === 'he' || lang === 'ar' ? 'rtl' : 'ltr'}
+      >
+        <div className="cp-noise" aria-hidden="true" />
+        <div className="max-w-md w-full bg-[#141418] border border-red-500/20 rounded-2xl p-8 text-center shadow-xl">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold mb-2">{t.analysisFailed}</h2>
+          <p className="text-gray-400 text-sm mb-6">{error}</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => fetchAnalysis(query, lang)}
+              className="w-full bg-[#F5C842] text-black font-semibold py-3 rounded-xl hover:bg-amber-400 active:scale-95 transition"
+            >
+              {t.tryAgain}
+            </button>
+            <Link
+              href="/"
+              className="w-full bg-white/5 border border-white/10 text-white font-semibold py-3 rounded-xl hover:bg-white/10 text-center"
+            >
+              {t.backToHome}
+            </Link>
+          </div>
         </div>
-        <SearchBar autoFocus />
       </div>
     );
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────
-
   return (
-    <div className="min-h-screen bg-surface-bg">
-      {/* Compact search bar */}
-      <div className="border-b border-surface-border bg-white">
-        <div className="mx-auto flex max-w-content items-center gap-4 px-4 py-3 sm:px-6">
-          <SearchBar initialQuery={query} compact />
-        </div>
-      </div>
+    <div 
+      className="cp-page min-h-screen bg-[#0A0A0F] text-white flex flex-col justify-between"
+      dir={lang === 'he' || lang === 'ar' ? 'rtl' : 'ltr'}
+    >
+      <div className="cp-noise" aria-hidden="true" />
 
-      {/* Main layout */}
-      <div className="mx-auto flex max-w-content gap-6 px-4 py-6 sm:px-6">
-        {/* Sidebar — desktop only */}
-        {!loading && results.length > 0 && intent?.type !== 'garbage' && (
-          <aside className="hidden w-64 shrink-0 lg:block">
-            <FilterPanel
-              filters={filters}
-              onChange={setFilters}
-              availableBrands={availableBrands}
-            />
-          </aside>
-        )}
+      {/* Header with search bar */}
+      <header className="border-b border-white/5 bg-[#0A0A0F]/80 backdrop-blur-md sticky top-0 z-50 py-4 px-6">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-lg font-bold tracking-tight text-white font-heading">
+              Clear<span className="text-[#F5C842]">Pick</span><span className="text-gray-600 text-xs">.ai</span>
+            </span>
+          </Link>
 
-        {/* Content area */}
-        <main className="min-w-0 flex-1">
-          {/* Garbage query */}
-          {intent?.type === 'garbage' && (
-            <div className="mt-12">
-              <GarbageMessage query={query} />
-            </div>
-          )}
-
-          {/* Loading */}
-          {loading && <SkeletonGrid />}
-
-          {/* Error */}
-          {error && !loading && (
-            <div className="rounded-card border border-red-200 bg-red-50 p-6 text-center">
-              <p className="text-sm text-red-600">{error}</p>
-              <button
-                onClick={() => {
-                  setError(null);
-                  setLoading(true);
-                  fetch(`/api/search?q=${encodeURIComponent(query)}`)
-                    .then(async (res) => {
-                      if (!res.ok) {
-                        const body = await res.json().catch(() => ({}));
-                        throw new Error(body.error ?? 'Search failed');
-                      }
-                      return res.json() as Promise<SearchResponse>;
-                    })
-                    .then((data) => {
-                      setResults(data.results);
-                      setCacheStatus(data.cacheStatus);
-                      setCachedAt(data.cachedAt);
-                      setAverageAccuracy(data.averageAccuracy);
-                      setTotalRatings(data.totalRatings);
-                    })
-                    .catch((err) => {
-                      setError(err instanceof Error ? err.message : 'Something went wrong.');
-                    })
-                    .finally(() => setLoading(false));
-                }}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary-800 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-700 active:scale-[0.97]"
-              >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <form onSubmit={handleSearchSubmit} className="w-full sm:max-w-xs md:max-w-md relative flex items-center bg-[#141418] border border-white/10 rounded-xl overflow-hidden px-3">
+              <div className="text-gray-500 me-2">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                Try again
-              </button>
-            </div>
-          )}
-
-          {/* Results */}
-          {!loading && !error && results.length > 0 && intent?.type !== 'garbage' && (
-            <>
-              {/* AI Insight */}
-              <AIInsight
-                query={query}
-                resultCount={results.length}
-                topProduct={topProduct}
-                priceRange={priceRange}
+              </div>
+              <input
+                type="text"
+                value={newQuery}
+                onChange={(e) => setNewQuery(e.target.value)}
+                placeholder={t.searchAnother}
+                className="w-full bg-transparent text-white placeholder-gray-500 py-3 text-sm focus:outline-none focus:ring-0"
               />
+              <button type="submit" className="hidden" />
+            </form>
 
-              {/* Meta bar */}
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium text-gray-700">{filteredResults.length}</span> results
-                    for &ldquo;<span className="font-medium text-gray-700">{query}</span>&rdquo;
+            {/* Language selector */}
+            <div className="relative" dir="ltr">
+              <select
+                value={lang}
+                onChange={(e) => changeLanguage(e.target.value as Language)}
+                className="appearance-none bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-gray-300 pl-8 pr-8 py-2 rounded-xl text-xs font-semibold transition cursor-pointer select-none focus:outline-none focus:ring-0"
+              >
+                <option value="he" className="bg-[#141418] text-white">עברית</option>
+                <option value="en" className="bg-[#141418] text-white">English</option>
+                <option value="ar" className="bg-[#141418] text-white">العربية</option>
+                <option value="es" className="bg-[#141418] text-white">Español</option>
+                <option value="ru" className="bg-[#141418] text-white">Русский</option>
+                <option value="fr" className="bg-[#141418] text-white">Français</option>
+                <option value="de" className="bg-[#141418] text-white">Deutsch</option>
+                <option value="zh" className="bg-[#141418] text-white">简体中文</option>
+                <option value="hi" className="bg-[#141418] text-white">हिन्दी</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-gray-400 text-xs">
+                🌐
+              </div>
+              <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-gray-400">
+                <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Dashboard Section */}
+      <main className="max-w-6xl w-full mx-auto px-6 py-8 flex-1">
+        {loading ? (
+          // Loading spinner + pulse animation
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-white/5 border-t-[#F5C842] rounded-full animate-spin" />
+              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-[#F5C842]/20 rounded-full animate-ping" />
+            </div>
+            <p className="text-gray-400 text-sm font-medium animate-pulse mt-4">
+              {t.loadingScan} &ldquo;{query}&rdquo;...
+            </p>
+          </div>
+        ) : (
+          data && (
+            <div className="space-y-6 animate-[cp-rise_0.6s_ease-out]">
+              {/* Product Info & Low Data Warning */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-white">
+                    {data.productName}
+                  </h1>
+                  <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                    {t.remarksCount.replace('{count}', String(data.commentCount)).replace('{threads}', String(data.threads.length))}
                   </p>
-                  <CacheBadge status={cacheStatus} cachedAt={cachedAt} />
+                </div>
+                {data.lowData && (
+                  <div className="inline-flex items-center gap-2 bg-amber-500/10 text-[#F5C842] border border-amber-500/20 rounded-lg px-3 py-1.5 text-xs font-semibold self-start sm:self-center">
+                    ⚠️ {t.lowDataWarning}
+                  </div>
+                )}
+              </div>
+
+              {/* Grid: Left: Score circle / warning, Right: Pros & Cons */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Score Card */}
+                <div className="bg-[#141418] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden group">
+                  {/* Subtle hover background highlight */}
+                  <div className="absolute inset-0 bg-radial-gradient from-[rgba(245,200,66,0.03)] to-transparent opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
+
+                  <h3 className="text-gray-400 text-xs uppercase font-bold tracking-wider mb-4">
+                    {t.unsponsoredScore}
+                  </h3>
+
+                  {data.lowData ? (
+                    <div className="py-6 flex flex-col items-center">
+                      <div className="text-amber-500 text-3xl mb-2">🤷‍♂️</div>
+                      <span className="text-[#F5C842] text-xl font-bold">N/A</span>
+                      <p className="text-xs text-gray-500 max-w-[200px] mt-2 leading-relaxed">
+                        {t.lowDataDesc}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="relative flex items-center justify-center mb-4">
+                      {/* Radial Progress Ring */}
+                      <svg className="w-32 h-32 transform -rotate-90">
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="54"
+                          stroke="rgba(255,255,255,0.05)"
+                          strokeWidth="8"
+                          fill="transparent"
+                        />
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="54"
+                          stroke="#F5C842"
+                          strokeWidth="8"
+                          fill="transparent"
+                          strokeDasharray={2 * Math.PI * 54}
+                          strokeDashoffset={2 * Math.PI * 54 * (1 - data.unsponsoredScore / 100)}
+                          strokeLinecap="round"
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      {/* Score display inside circle */}
+                      <div className="absolute flex flex-col items-center justify-center">
+                        <span className="text-3xl font-extrabold text-white leading-none">
+                          {data.unsponsoredScore}%
+                        </span>
+                        <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">
+                          {t.unbiasedLabel}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-gray-500 leading-relaxed max-w-[220px]">
+                    {t.scoreDesc}
+                  </p>
                 </div>
 
-                {/* Mobile filter button */}
-                <button
-                  onClick={() => setMobileFilterOpen(true)}
-                  className="flex items-center gap-1.5 rounded-lg border border-surface-border bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                  Filters
-                </button>
-              </div>
+                {/* Pros and Cons Card */}
+                <div className="lg:col-span-2 bg-[#141418] border border-white/5 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Pros column */}
+                    <div>
+                      <h3 className="text-emerald-400 font-extrabold text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center text-xs">✓</span>
+                        {t.prosTitle}
+                      </h3>
+                      {data.pros.length > 0 ? (
+                        <ul className="space-y-3">
+                          {data.pros.map((pro, index) => (
+                            <li key={index} className="text-gray-300 text-sm leading-relaxed flex items-start gap-2.5">
+                              <span className="text-emerald-500 mt-1 select-none">•</span>
+                              <span>{pro}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-500 text-xs italic">{t.noPros}</p>
+                      )}
+                    </div>
 
-              {/* Verified badge */}
-              <div className="mb-4">
-                <VerifiedBadge sourceCount={availableBrands.length} />
-              </div>
+                    {/* Cons column */}
+                    <div>
+                      <h3 className="text-rose-400 font-extrabold text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-rose-500/10 flex items-center justify-center text-xs">✗</span>
+                        {t.consTitle}
+                      </h3>
+                      {data.cons.length > 0 ? (
+                        <ul className="space-y-3">
+                          {data.cons.map((con, index) => (
+                            <li key={index} className="text-gray-300 text-sm leading-relaxed flex items-start gap-2.5">
+                              <span className="text-rose-500 mt-1 select-none">•</span>
+                              <span>{con}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-500 text-xs italic">{t.noCons}</p>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Product grid */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredResults.map((item) => (
-                  <ProductCard
-                    key={item.id}
-                    name={item.title}
-                    year={new Date().getFullYear()}
-                    price={item.price ? `$${item.price.toLocaleString()}` : 'N/A'}
-                    image={item.image ?? ''}
-                    description={item.snippet ?? ''}
-                    rating={item.rating ?? 0}
-                    source={item.url ?? '#'}
-                    isSelected={compareSet.has(item.title)}
-                    onToggleCompare={toggleCompare}
-                  />
-                ))}
-              </div>
-
-              {/* No filtered results */}
-              {filteredResults.length === 0 && results.length > 0 && (
-                <div className="mt-8 text-center">
-                  <p className="text-sm text-gray-500">No products match your filters.</p>
-                  <button
-                    onClick={() => setFilters(DEFAULT_FILTERS)}
-                    className="mt-2 text-sm font-medium text-accent hover:underline"
-                  >
-                    Reset filters
-                  </button>
+                  {/* Best Deal Finder Widget */}
+                  <div className="border-t border-white/5 mt-6 pt-6 flex flex-col gap-4">
+                    <h4 className="text-gray-400 font-extrabold text-xs uppercase tracking-wider">
+                      {t.bestDealTitle}
+                    </h4>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <a
+                        href={`https://www.amazon.com/s?k=${encodeURIComponent(data.productName)}&tag=clearpick07-20`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 bg-[#F5C842] hover:bg-amber-400 active:scale-95 text-black font-bold text-sm px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/5 sm:flex-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        {t.checkAmazon}
+                      </a>
+                      <a
+                        href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(data.productName)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:text-white text-gray-300 font-bold text-sm px-6 py-3 rounded-xl transition active:scale-95 sm:flex-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                        {t.compareOther}
+                      </a>
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              {/* Source logos */}
-              <div className="mt-8">
-                <SourceLogos />
               </div>
 
-              {/* Comparison table */}
-              {showComparison && (
-                <div ref={comparisonRef} className="mt-6">
-                  <ComparisonTable
-                    products={compareProducts}
-                    onRemove={(name) => toggleCompare(name)}
-                    onClear={() => {
-                      setCompareSet(new Set());
-                      setShowComparison(false);
-                    }}
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          {/* No results */}
-          {!loading &&
-            !error &&
-            results.length === 0 &&
-            intent?.type !== 'garbage' &&
-            intent?.type !== 'brand' && (
-              <div className="mt-12 text-center">
-                <div className="mb-4 text-5xl">📭</div>
-                <h2 className="text-lg font-semibold text-gray-700">No results found</h2>
-                <p className="mt-1 text-sm text-gray-400">
-                  Try a different search term or check back later.
-                </p>
+              {/* Quotes Section (Unfiltered Voices) */}
+              <div className="bg-[#141418] border border-white/5 rounded-2xl p-6 shadow-lg">
+                <h3 className="text-[#F5C842] font-extrabold text-sm uppercase tracking-wider mb-4">
+                  {t.quotesTitle}
+                </h3>
+                {data.quotes.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {data.quotes.map((quote, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-[#1C1C22]/50 border border-white/5 rounded-xl p-4 flex flex-col justify-between gap-3 relative"
+                      >
+                        <span className="text-2xl text-white/10 absolute top-2 left-2 leading-none font-serif select-none">&ldquo;</span>
+                        <p className="text-gray-300 text-sm italic relative z-10 leading-relaxed pt-2 pl-2">
+                          {quote}
+                        </p>
+                        <div className="text-[10px] text-gray-500 self-end font-semibold uppercase tracking-wider">
+                          {t.redditUser}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-xs italic">{t.noQuotes}</p>
+                )}
               </div>
-            )}
-        </main>
-      </div>
 
-      {/* Mobile filter drawer */}
-      <FilterPanel
-        filters={filters}
-        onChange={setFilters}
-        availableBrands={availableBrands}
-        isMobile
-        isOpen={mobileFilterOpen}
-        onClose={() => setMobileFilterOpen(false)}
-      />
+              {/* Source Threads */}
+              <div className="bg-[#141418] border border-white/5 rounded-2xl p-6 shadow-lg">
+                <h3 className="text-gray-400 font-extrabold text-xs uppercase tracking-wider mb-3">
+                  {t.sourcesTitle}
+                </h3>
+                {data.threads.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {data.threads.map((thread, index) => (
+                      <a
+                        key={index}
+                        href={thread.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-xs text-gray-300 rounded-lg px-3.5 py-2 transition"
+                      >
+                        <span>{thread.title.length > 40 ? `${thread.title.slice(0, 40)}...` : thread.title}</span>
+                        <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-xs italic">{t.noSources}</p>
+                )}
+              </div>
+            </div>
+          )
+        )}
+      </main>
 
-      {/* Compare bar (sticky bottom) */}
-      <CompareBar
-        count={compareSet.size}
-        onView={handleViewCompare}
-        onClear={() => {
-          setCompareSet(new Set());
-          setShowComparison(false);
-        }}
-      />
+      {/* Feedback trigger button above footer */}
+      <FeedbackButton lang={lang} />
 
-      {/* Floating accuracy rating widget */}
-      {!loading && results.length > 0 && intent?.type !== 'garbage' && compareSet.size === 0 && (
-        <AccuracyRating
-          query={query}
-          averageAccuracy={averageAccuracy}
-          totalRatings={totalRatings}
-          onRated={handleRated}
-        />
-      )}
+      {/* Footer */}
+      <footer className="z-10 text-xs text-gray-600 w-full text-center border-t border-white/5 py-6 flex flex-col sm:flex-row justify-between items-center gap-4 max-w-6xl mx-auto px-6">
+        <p>© {new Date().getFullYear()} ClearPick.ai. {t.footerAllRights}</p>
+        <div className="flex flex-wrap justify-center gap-4 text-gray-500">
+          <a href="mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai" className="hover:text-[#F5C842] transition cursor-pointer">{t.feedback}</a>
+        </div>
+        <div className="flex gap-4">
+          <span className="text-[#F5C842] font-semibold">{t.footerUnsponsored}</span>
+          <span className="text-gray-600">|</span>
+          <span>{t.footerPowered}</span>
+        </div>
+      </footer>
     </div>
   );
 }
 
-// ── Page wrapper with Suspense for useSearchParams ───────────────────────────
-
-export default function SearchPage() {
+export default function SearchDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-surface-bg">
-          <div className="mx-auto max-w-content px-4">
-            <SkeletonGrid />
+        <div className="cp-page min-h-screen bg-[#0A0A0F] text-white flex items-center justify-center">
+          <div className="cp-noise" aria-hidden="true" />
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-white/5 border-t-[#F5C842] rounded-full animate-spin" />
+            <p className="text-gray-500 text-sm font-medium animate-pulse">
+              Loading ClearPick dashboard... / טוען דשבורד ClearPick...
+            </p>
           </div>
         </div>
       }
     >
-      <SearchContent />
+      <SearchDashboardContent />
     </Suspense>
   );
 }
