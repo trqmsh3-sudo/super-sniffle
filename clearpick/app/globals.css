@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+.glass-panel {
+  background-color: rgba(10, 10, 15, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glow-underlight {
+  background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(5,5,5,0) 70%);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(to right, #f2ca50, #ffe088);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════════════
    ClearPick.ai — Design System
    See BRAND.md for full brand identity guidelines
