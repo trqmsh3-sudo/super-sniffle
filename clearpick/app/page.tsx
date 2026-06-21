@@ -368,19 +368,7 @@ function HomeContent() {
               </div>
               <span className="font-label-caps text-[10px] tracking-[0.3em] text-white/60 uppercase">NEURAL CORE ACTIVE</span>
             </div>
-            <a 
-              href="mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai"
-              className="inline-flex items-center gap-6 px-12 py-6 glass-panel-premium rounded-2xl hover:bg-white/[0.04] hover:border-primary/30 transition-all active:scale-95 group cursor-pointer text-decoration-none"
-            >
-              <span className="material-symbols-outlined text-primary text-2xl">chat_bubble</span>
-              <span className="font-display-lg text-xl font-semibold text-white">{t.feedback}</span>
-              <span 
-                className="material-symbols-outlined text-white/40 text-xl group-hover:translate-x-[-8px] transition-transform"
-                style={{ transform: isRTL ? 'none' : 'rotate(180deg)' }}
-              >
-                chevron_left
-              </span>
-            </a>
+            <FeedbackButton lang={lang} variant="large" />
           </div>
         </section>
       </main>
@@ -398,7 +386,7 @@ function HomeContent() {
             <button type="button" onClick={() => setActiveModal('privacy')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.privacy}</button>
             <button type="button" onClick={() => setActiveModal('terms')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.terms}</button>
             <button type="button" onClick={() => setActiveModal('disclosure')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.disclosure}</button>
-            <a className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase" href="mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai">{lang === 'he' ? 'יצירת קשר' : 'Contact Us'}</a>
+            <FeedbackButton lang={lang} variant="footer" />
           </div>
         </div>
       </footer>

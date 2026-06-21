@@ -496,7 +496,7 @@ interface AnalysisResponse {
             <button type="button" onClick={() => setActiveModal('privacy')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.privacy}</button>
             <button type="button" onClick={() => setActiveModal('terms')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.terms}</button>
             <button type="button" onClick={() => setActiveModal('disclosure')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.disclosure}</button>
-            <a className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase" href="mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai">{lang === 'he' ? 'יצירת קשר' : 'Contact Us'}</a>
+            <FeedbackButton lang={lang} variant="footer" />
           </div>
         </div>
       </footer>

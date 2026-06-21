@@ -13,6 +13,7 @@ import BrandHero from '@/components/BrandHero';
 import ProductGrid from '@/components/ProductGrid';
 import RelatedBrands from '@/components/RelatedBrands';
 import { Language, translations } from '@/lib/translations';
+import FeedbackButton from '@/components/FeedbackButton';
 
 // ── On-demand ISR: any slug is valid, built on first visit, cached 24h ────────
 
@@ -180,12 +181,7 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
             </span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center">
-            <a 
-              className="text-gray-400 font-label-caps text-xs tracking-widest hover:text-primary transition-colors uppercase" 
-              href={`mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai%20-%20Brand%20${brand.name}`}
-            >
-              {lang === 'he' ? 'יצירת קשר' : 'Contact Us'}
-            </a>
+            <FeedbackButton lang={lang} variant="footer" />
             <span className="hidden sm:inline text-white/10">|</span>
             <p className="text-xs font-body-md text-gray-500">
               Prices and availability may vary. Last updated every 24 hours.
