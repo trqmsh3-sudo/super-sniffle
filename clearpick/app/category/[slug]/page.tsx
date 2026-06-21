@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import ProductGrid from '@/components/ProductGrid';
 import { fetchCategoryProducts } from '@/lib/wikiCategoryData';
+import { Language, translations } from '@/lib/translations';
 
 // ── Category Definitions ─────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ export const dynamicParams = true;
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ l?: string }>;
 }
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
@@ -115,10 +117,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
 // ── Page Component ───────────────────────────────────────────────────────────
 
-export default async function CategoryPage({ params }: CategoryPageProps) {
+export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
   const { slug } = await params;
+  const sParams = await searchParams;
   const label = CATEGORY_LABELS[slug] ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  const color = CATEGORY_COLORS[slug] ?? '#2563eb';
+  const color = CATEGORY_COLORS[slug] ?? '#F5C842';
 
   const products = await fetchCategoryProducts(slug);
 
@@ -126,6 +129,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   if (!CATEGORY_LABELS[slug] && products.length === 0) {
     redirect(`/search?q=${encodeURIComponent(slug)}`);
   }
+
+  const langParam = sParams?.l as Language;
+  const lang: Language = ['he', 'en', 'ar', 'es', 'ru', 'fr', 'de', 'zh', 'hi'].includes(langParam)
+    ? langParam
+    : 'he';
+
+  const isRTL = lang === 'he' || lang === 'ar';
+  const t = translations[lang] || translations['he'];
 
   // ── JSON-LD: CollectionPage + ItemList ────────────────────────────────
   const allProducts = products.flatMap((g) => g.items);
@@ -158,7 +169,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-white">
+    <main 
+      className="premium-bg text-on-surface min-h-screen relative overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
+      {/* Atmospheric Visuals */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] hero-glow-premium pointer-events-none" />
+      <div className="lens-flare-premium top-1/4 left-1/4" />
+
       {/* ── Structured Data ──────────────────────────────────────────────── */}
       <script
         type="application/ld+json"
@@ -170,36 +188,23 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(135deg, ${color}12 0%, ${color}06 50%, transparent 100%)`,
-          }}
-        />
+      <section className="relative overflow-hidden border-b border-white/5 bg-gradient-to-b from-[#F5C842]/5 to-transparent">
         <div className="relative mx-auto max-w-6xl px-6 pb-12 pt-16 md:pb-16 md:pt-24">
           <div className="text-center">
             <span
-              className="mb-4 inline-block rounded-full px-4 py-1.5 text-sm font-semibold uppercase tracking-wider text-white"
-              style={{ backgroundColor: color }}
+              className="mb-4 inline-block rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20"
             >
               Category
             </span>
-            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 md:text-6xl">
+            <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-6xl font-display-lg">
               {label}
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-gray-500">
+            <p className="mx-auto mt-4 max-w-xl text-lg text-gray-400 font-body-md">
               AI-powered product research — honest scores and real reviews for{' '}
               {label.toLowerCase()}.
             </p>
           </div>
         </div>
-        <div
-          className="h-[3px]"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
-          }}
-        />
       </section>
 
       {/* ── Product Grid ─────────────────────────────────────────────────── */}
@@ -211,16 +216,27 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       />
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 px-6 py-10 text-center">
-        <p className="text-sm text-gray-400">
-          Product data powered by{' '}
-          <span className="font-semibold" style={{ color }}>
-            ClearPick.ai
-          </span>
-        </p>
-        <p className="mt-1 text-xs text-gray-300">
-          Prices and availability may vary. Last updated every 24 hours.
-        </p>
+      <footer className="border-t border-white/5 bg-transparent px-6 py-12 text-center text-gray-400 relative z-10">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-sm font-body-md text-gray-400">
+            Product data powered by{' '}
+            <span className="font-semibold" style={{ color: '#F5C842' }}>
+              ClearPick.ai
+            </span>
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center">
+            <a 
+              className="text-gray-400 font-label-caps text-xs tracking-widest hover:text-primary transition-colors uppercase" 
+              href={`mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai%20-%20Category%20${label}`}
+            >
+              {lang === 'he' ? 'יצירת קשר' : 'Contact Us'}
+            </a>
+            <span className="hidden sm:inline text-white/10">|</span>
+            <p className="text-xs font-body-md text-gray-500">
+              Prices and availability may vary. Last updated every 24 hours.
+            </p>
+          </div>
+        </div>
       </footer>
     </main>
   );

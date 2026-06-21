@@ -1,3 +1,5 @@
+'use client';
+
 // =============================================================================
 // ClearPick.ai — Related Brands Component
 // Horizontal strip of related brand cards (same category, excluding current)
@@ -20,7 +22,7 @@ export default function RelatedBrands({ currentSlug, category }: RelatedBrandsPr
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-12">
-      <h2 className="mb-6 text-lg font-semibold text-gray-700">
+      <h2 className="mb-6 text-lg font-bold text-white font-display-lg border-b border-white/5 pb-3">
         Related Brands
       </h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -28,18 +30,23 @@ export default function RelatedBrands({ currentSlug, category }: RelatedBrandsPr
           <Link
             key={brand.slug}
             href={`/brand/${brand.slug}`}
-            className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+            className="group flex items-center gap-3 rounded-xl border border-white/5 bg-[#141418]/60 p-4 transition-all duration-300 hover:border-primary/30 hover:bg-white/10 hover:shadow-[0_4px_15px_rgba(242,202,80,0.06)] hover:-translate-y-0.5"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://logo.clearbit.com/${brand.slug}.com`}
-              alt={`${brand.name} logo`}
-              width={36}
-              height={36}
-              className="h-9 w-9 rounded-lg object-contain"
-              loading="lazy"
-            />
-            <span className="text-sm font-medium text-gray-800">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/40 p-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://logo.clearbit.com/${brand.slug}.com`}
+                alt={`${brand.name} logo`}
+                width={28}
+                height={28}
+                className="h-7 w-7 rounded object-contain"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(brand.name)}&background=f2ca50&color=000000&bold=true`;
+                }}
+              />
+            </div>
+            <span className="text-sm font-bold text-gray-200 group-hover:text-primary transition-colors font-body-md">
               {brand.name}
             </span>
           </Link>

@@ -48,9 +48,9 @@ export default function BrandHero({
 
   return (
     <section
-      className="relative min-h-[220px] overflow-hidden border-b border-surface-border"
+      className="relative min-h-[220px] overflow-hidden border-b border-white/5"
       style={{
-        background: `linear-gradient(135deg, ${primaryColor}15 0%, #F8FAFC 60%)`,
+        background: `linear-gradient(135deg, ${primaryColor}15 0%, #050507 60%)`,
       }}
     >
       {/* ── Content ────────────────────────────────────────────────────── */}
@@ -59,15 +59,15 @@ export default function BrandHero({
           visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}
       >
-        {/* Logo — white bg, rounded-xl, shadow */}
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-surface-border bg-white p-2 shadow-card md:h-24 md:w-24">
+        {/* Logo — dark glass bg, rounded-xl */}
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/40 p-2 shadow-xl md:h-24 md:w-24">
           <Image
             src={logo}
             alt={`${name} logo`}
             width={80}
             height={80}
             priority
-            className="h-14 w-14 object-contain md:h-18 md:w-18"
+            className="h-14 w-14 object-contain md:h-18 md:w-18 rounded-lg"
             onError={(e) => {
               const target = e.currentTarget;
               target.style.display = 'none';
@@ -85,15 +85,15 @@ export default function BrandHero({
         </div>
 
         {/* Text Content */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 text-right sm:text-left">
           {/* Brand Name */}
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl md:text-5xl">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl font-display-lg">
             {name}
           </h1>
 
           {/* Pills row */}
           <div
-            className={`mt-3 flex flex-wrap gap-2 transition-all delay-150 duration-500 ${
+            className={`mt-3 flex flex-wrap gap-2 transition-all delay-150 duration-500 justify-end sm:justify-start ${
               visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
             }`}
           >
@@ -116,10 +116,10 @@ export default function BrandHero({
 function Pill({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
   return (
     <span
-      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+      className={`rounded-full px-3 py-1 text-xs font-semibold border ${
         muted
-          ? 'bg-gray-100 text-gray-500'
-          : 'bg-primary-50 uppercase tracking-wider text-primary-800'
+          ? 'bg-white/5 text-gray-400 border-white/10'
+          : 'bg-primary/10 uppercase tracking-wider text-primary border-primary/25'
       }`}
     >
       {children}

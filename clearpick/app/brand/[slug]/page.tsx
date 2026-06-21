@@ -12,6 +12,7 @@ import { fetchBrandData } from '@/lib/brandData';
 import BrandHero from '@/components/BrandHero';
 import ProductGrid from '@/components/ProductGrid';
 import RelatedBrands from '@/components/RelatedBrands';
+import { Language, translations } from '@/lib/translations';
 
 // ── On-demand ISR: any slug is valid, built on first visit, cached 24h ────────
 
@@ -22,6 +23,7 @@ export const dynamicParams = true;
 
 interface BrandPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ l?: string }>;
 }
 
 export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
@@ -61,12 +63,20 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
 
 // ── Page Component ───────────────────────────────────────────────────────────
 
-export default async function BrandPage({ params }: BrandPageProps) {
+export default async function BrandPage({ params, searchParams }: BrandPageProps) {
   const { slug } = await params;
+  const sParams = await searchParams;
   const data = await fetchBrandData(slug);
 
   // fetchBrandData now always returns data (even for unknown brands)
   const { brand, products } = data;
+
+  const langParam = sParams?.l as Language;
+  const lang: Language = ['he', 'en', 'ar', 'es', 'ru', 'fr', 'de', 'zh', 'hi'].includes(langParam)
+    ? langParam
+    : 'he';
+
+  const isRTL = lang === 'he' || lang === 'ar';
 
   // ── JSON-LD: Organization ──────────────────────────────────────────────
   const organizationLd = {
@@ -105,7 +115,8 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
   return (
     <main
-      className="min-h-screen bg-surface-bg"
+      className="premium-bg text-on-surface min-h-screen relative overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container"
+      dir={isRTL ? 'rtl' : 'ltr'}
       style={
         {
           '--brand-primary': brand.primaryColor,
@@ -116,6 +127,10 @@ export default async function BrandPage({ params }: BrandPageProps) {
         } as React.CSSProperties
       }
     >
+      {/* Atmospheric Visuals */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] hero-glow-premium pointer-events-none" />
+      <div className="lens-flare-premium top-1/4 left-1/4" />
+
       {/* ── Structured Data ──────────────────────────────────────────────── */}
       <script
         type="application/ld+json"
@@ -155,17 +170,28 @@ export default async function BrandPage({ params }: BrandPageProps) {
       {/* ── Related Brands ───────────────────────────────────────────────── */}
       <RelatedBrands currentSlug={slug} category={brand.category} />
 
-      {/* ── Footer Accent ────────────────────────────────────────────────── */}
-      <footer className="border-t border-surface-border bg-white px-6 py-10 text-center">
-        <p className="text-sm text-gray-400">
-          Product data powered by{' '}
-          <span className="font-semibold" style={{ color: brand.primaryColor }}>
-            ClearPick.ai
-          </span>
-        </p>
-        <p className="mt-1 text-xs text-gray-300">
-          Prices and availability may vary. Last updated every 24 hours.
-        </p>
+      {/* ── Footer ────────────────────────────────────────────────── */}
+      <footer className="border-t border-white/5 bg-transparent px-6 py-12 text-center text-gray-400 relative z-10">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-sm font-body-md text-gray-400">
+            Product data powered by{' '}
+            <span className="font-semibold" style={{ color: brand.primaryColor }}>
+              ClearPick.ai
+            </span>
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center">
+            <a 
+              className="text-gray-400 font-label-caps text-xs tracking-widest hover:text-primary transition-colors uppercase" 
+              href={`mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai%20-%20Brand%20${brand.name}`}
+            >
+              {lang === 'he' ? 'יצירת קשר' : 'Contact Us'}
+            </a>
+            <span className="hidden sm:inline text-white/10">|</span>
+            <p className="text-xs font-body-md text-gray-500">
+              Prices and availability may vary. Last updated every 24 hours.
+            </p>
+          </div>
+        </div>
       </footer>
     </main>
   );

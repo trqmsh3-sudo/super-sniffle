@@ -56,15 +56,15 @@ export default function ProductGrid({
 
   if (products.length === 0) {
     return (
-      <section className="mx-auto max-w-content px-6 py-20">
-        <div className="rounded-card border border-dashed border-surface-border bg-white p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-bg">
-            <svg className="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-12 text-center backdrop-blur-md">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 border border-white/10">
+            <svg className="h-8 w-8 text-primary/70 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-600">No products listed yet</h3>
-          <p className="mt-2 text-sm text-gray-400">
+          <h3 className="text-lg font-bold text-white font-display-lg">No products listed yet</h3>
+          <p className="mt-2 text-sm text-gray-400 font-body-md">
             We are still gathering {brandName} product data. Check back soon.
           </p>
         </div>
@@ -75,14 +75,14 @@ export default function ProductGrid({
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <section className="mx-auto max-w-content px-6 py-12 md:py-16">
+    <section className="mx-auto max-w-6xl px-6 py-12 md:py-16">
       {/* Section Header */}
-      <div className="mb-8 flex items-end justify-between">
+      <div className="mb-8 flex items-end justify-between border-b border-white/5 pb-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+          <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl font-display-lg">
             Products
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-400 font-body-md">
             {products.length} {products.length === 1 ? 'model' : 'models'}
           </p>
         </div>
@@ -112,24 +112,24 @@ export default function ProductGrid({
 
 export function ProductGridSkeleton() {
   return (
-    <section className="mx-auto max-w-content px-6 py-12 md:py-16">
+    <section className="mx-auto max-w-6xl px-6 py-12 md:py-16">
       {/* Header skeleton */}
       <div className="mb-8">
-        <div className="h-8 w-32 animate-pulse rounded-lg bg-gray-100" />
-        <div className="mt-2 h-4 w-48 animate-pulse rounded bg-gray-50" />
+        <div className="h-8 w-32 animate-pulse rounded-lg bg-white/5" />
+        <div className="mt-2 h-4 w-48 animate-pulse rounded bg-white/10" />
       </div>
 
       {/* Cards skeleton */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="overflow-hidden rounded-card border border-surface-border bg-white">
-            <div className="aspect-[4/3] animate-pulse bg-gray-50" />
+          <div key={i} className="overflow-hidden rounded-xl border border-white/5 bg-[#141418]/60">
+            <div className="aspect-[4/3] animate-pulse bg-white/5" />
             <div className="p-3.5">
-              <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
-              <div className="my-2 h-[2px] w-full animate-pulse rounded-full bg-gray-50" />
-              <div className="h-3 w-16 animate-pulse rounded bg-gray-100" />
-              <div className="mt-2 h-3 w-full animate-pulse rounded bg-gray-50" />
-              <div className="mt-1 h-3 w-5/6 animate-pulse rounded bg-gray-50" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-white/10" />
+              <div className="my-2 h-[2px] w-full animate-pulse rounded-full bg-white/5" />
+              <div className="h-3 w-16 animate-pulse rounded bg-white/10" />
+              <div className="mt-2 h-3 w-full animate-pulse rounded bg-white/5" />
+              <div className="mt-1 h-3 w-5/6 animate-pulse rounded bg-white/5" />
             </div>
           </div>
         ))}

@@ -88,12 +88,15 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'sans-serif'],
         "title-md": ["Hanken Grotesk"],
-        "body-lg": ["Hanken Grotesk"],
+        "body-lg": ["Inter", "sans-serif"],
         "label-sm": ["Geist"],
         "headline-lg": ["Hanken Grotesk"],
-        "body-md": ["Hanken Grotesk"],
-        "display-lg": ["Hanken Grotesk"],
+        "body-md": ["Inter", "sans-serif"],
+        "display-lg": ["Sora", "sans-serif"],
         "headline-lg-mobile": ["Hanken Grotesk"],
+        "display-lg-mobile": ["Sora", "sans-serif"],
+        "label-caps": ["Inter", "sans-serif"],
+        "headline-md": ["Sora", "sans-serif"],
       },
       borderRadius: {
         card: '14px',
@@ -117,12 +120,15 @@ const config: Config = {
         'hero': ['3rem', { lineHeight: '1.1', fontWeight: '800' }],
         'hero-mobile': ['1.75rem', { lineHeight: '1.2', fontWeight: '800' }],
         "title-md": ["20px", { lineHeight: "1.4", letterSpacing: "0.02em", fontWeight: "500" }],
-        "body-lg": ["18px", { lineHeight: "1.6", letterSpacing: "0", fontWeight: "400" }],
+        "body-lg": ["20px", { lineHeight: "1.6", fontWeight: "300" }],
         "label-sm": ["12px", { lineHeight: "1", letterSpacing: "0.1em", fontWeight: "600" }],
         "headline-lg": ["40px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
-        "body-md": ["16px", { lineHeight: "1.6", letterSpacing: "0", fontWeight: "400" }],
-        "display-lg": ["64px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
-        "headline-lg-mobile": ["32px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }]
+        "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }],
+        "display-lg": ["64px", { lineHeight: "1.05", letterSpacing: "-0.04em", fontWeight: "800" }],
+        "headline-lg-mobile": ["32px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "display-lg-mobile": ["42px", { lineHeight: "1.1", fontWeight: "800" }],
+        "label-caps": ["12px", { lineHeight: "1.0", letterSpacing: "0.15em", fontWeight: "600" }],
+        "headline-md": ["36px", { lineHeight: "1.2", fontWeight: "700" }],
       },
       keyframes: {
         'fade-in': {

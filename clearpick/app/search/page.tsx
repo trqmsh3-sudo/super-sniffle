@@ -21,9 +21,7 @@ interface AnalysisResponse {
   commentCount: number;
   lowData: boolean;
   error?: string;
-}
-
-function SearchDashboardContent() {
+}function SearchDashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') ?? '';
@@ -35,6 +33,7 @@ function SearchDashboardContent() {
   const [data, setData] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newQuery, setNewQuery] = useState(query);
+  const [activeModal, setActiveModal] = useState<null | 'terms' | 'privacy' | 'disclosure'>(null);
 
   const SUPPORTED_LANGUAGES: Language[] = ['he', 'en', 'ar', 'es', 'ru', 'fr', 'de', 'zh', 'hi'];
 
@@ -107,30 +106,32 @@ function SearchDashboardContent() {
   };
 
   const t = translations[lang];
+  const isRTL = lang === 'he' || lang === 'ar';
 
   // ── Render States ──────────────────────────────────────────────────────────
 
   if (error) {
     return (
       <div 
-        className="cp-page min-h-screen bg-[#0A0A0F] text-white flex flex-col items-center justify-center p-6"
-        dir={lang === 'he' || lang === 'ar' ? 'rtl' : 'ltr'}
+        className="premium-bg text-on-surface min-h-screen flex flex-col items-center justify-center p-6"
+        dir={isRTL ? 'rtl' : 'ltr'}
       >
-        <div className="cp-noise" aria-hidden="true" />
-        <div className="max-w-md w-full bg-[#141418] border border-red-500/20 rounded-2xl p-8 text-center shadow-xl">
+        {/* Atmospheric Visuals */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] hero-glow-premium pointer-events-none" />
+        <div className="max-w-md w-full glass-panel-premium border-red-500/20 rounded-[2rem] p-8 text-center shadow-2xl relative z-10">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold mb-2">{t.analysisFailed}</h2>
-          <p className="text-gray-400 text-sm mb-6">{error}</p>
+          <h2 className="text-xl font-bold mb-2 font-display-lg text-white">{t.analysisFailed}</h2>
+          <p className="text-gray-400 text-sm mb-6 font-body-md leading-relaxed">{error}</p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => fetchAnalysis(query, lang)}
-              className="w-full bg-[#F5C842] text-black font-semibold py-3 rounded-xl hover:bg-amber-400 active:scale-95 transition"
+              className="w-full bg-[#F5C842] hover:bg-[#D4A820] text-black font-bold py-4 rounded-xl hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(242,202,80,0.3)] transition active:scale-95 cursor-pointer"
             >
               {t.tryAgain}
             </button>
             <Link
               href="/"
-              className="w-full bg-white/5 border border-white/10 text-white font-semibold py-3 rounded-xl hover:bg-white/10 text-center"
+              className="w-full bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 text-center transition cursor-pointer"
             >
               {t.backToHome}
             </Link>
@@ -142,33 +143,36 @@ function SearchDashboardContent() {
 
   return (
     <div 
-      className="cp-page min-h-screen bg-[#0A0A0F] text-white flex flex-col justify-between"
-      dir={lang === 'he' || lang === 'ar' ? 'rtl' : 'ltr'}
+      className="premium-bg text-on-surface min-h-screen flex flex-col justify-between font-body-md selection:bg-primary-container selection:text-on-primary-container relative overflow-x-hidden"
+      dir={isRTL ? 'rtl' : 'ltr'}
     >
-      <div className="cp-noise" aria-hidden="true" />
+      {/* Atmospheric Visuals */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] hero-glow-premium pointer-events-none" />
+      <div className="lens-flare-premium top-1/4 left-1/4" />
+      <div className="lens-flare-premium bottom-1/4 right-1/4" />
 
       {/* Header with search bar */}
-      <header className="border-b border-white/5 bg-[#0A0A0F]/80 backdrop-blur-md sticky top-0 z-50 py-4 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight text-white font-heading">
-              Clear<span className="text-[#F5C842]">Pick</span><span className="text-gray-600 text-xs">.ai</span>
-            </span>
-          </Link>
+      <header className="border-b border-white/5 bg-surface-glass backdrop-blur-2xl sticky top-0 z-50 py-4 px-6" dir="ltr">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div 
+            onClick={() => router.push('/')}
+            className="font-display-lg text-2xl font-extrabold tracking-tighter text-white flex items-center gap-2 group cursor-pointer transition-all"
+          >
+            <div className="w-8 h-8 bg-[#F5C842] rounded-lg flex items-center justify-center text-black">
+              <span className="material-symbols-outlined font-bold text-lg">auto_awesome</span>
+            </div>
+            ClearPick.ai
+          </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <form onSubmit={handleSearchSubmit} className="w-full sm:max-w-xs md:max-w-md relative flex items-center bg-[#141418] border border-white/10 rounded-xl overflow-hidden px-3">
-              <div className="text-gray-500 me-2">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
+            <form onSubmit={handleSearchSubmit} className="w-full sm:max-w-xs md:max-w-md relative flex items-center bg-black/40 border border-white/10 rounded-full px-4 focus-within:border-primary/50 transition-all duration-300">
+              <span className="material-symbols-outlined text-primary/60 text-lg me-2">search</span>
               <input
                 type="text"
                 value={newQuery}
                 onChange={(e) => setNewQuery(e.target.value)}
                 placeholder={t.searchAnother}
-                className="w-full bg-transparent text-white placeholder-gray-500 py-3 text-sm focus:outline-none focus:ring-0"
+                className="w-full bg-transparent text-white placeholder:text-text-muted/40 py-2.5 text-sm focus:outline-none focus:ring-0 border-none outline-none"
               />
               <button type="submit" className="hidden" />
             </form>
@@ -204,39 +208,39 @@ function SearchDashboardContent() {
       </header>
 
       {/* Main Dashboard Section */}
-      <main className="max-w-6xl w-full mx-auto px-6 py-8 flex-1">
+      <main className="max-w-7xl w-full mx-auto px-6 py-8 flex-grow relative z-10">
         {loading ? (
           // Loading spinner + pulse animation
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <div className="flex flex-col items-center justify-center py-32 gap-6 relative z-10">
             <div className="relative">
-              <div className="w-16 h-16 border-4 border-white/5 border-t-[#F5C842] rounded-full animate-spin" />
-              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-[#F5C842]/20 rounded-full animate-ping" />
+              <div className="w-16 h-16 border-4 border-white/5 border-t-primary rounded-full animate-spin" />
+              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-primary/20 rounded-full animate-ping" />
             </div>
-            <p className="text-gray-400 text-sm font-medium animate-pulse mt-4">
+            <p className="text-on-surface-variant text-base font-medium animate-pulse mt-4 font-body-md text-center max-w-md">
               {t.loadingScan} &ldquo;{query}&rdquo;...
             </p>
           </div>
         ) : (
           data && (
-            <div className="space-y-6 animate-[cp-rise_0.6s_ease-out]">
+            <div className="space-y-6 animate-[fade-in_0.4s_ease-out]">
               {/* Product Info & Low Data Warning */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-white">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold font-display-lg text-white">
                     {data.productName}
                   </h1>
-                  <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                  <p className="text-on-surface-variant text-xs sm:text-sm mt-1">
                     {data.commentCount === 0
                       ? t.remarksFallback
                       : t.remarksCount.replace('{count}', String(data.commentCount)).replace('{threads}', String(data.threads.length))}
                   </p>
                 </div>
                 {data.commentCount === 0 ? (
-                  <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg px-3 py-1.5 text-xs font-semibold self-start sm:self-center">
+                  <div className="inline-flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 rounded-full px-4 py-1.5 text-xs font-semibold self-start sm:self-center">
                     🤖 {t.aiConsensus}
                   </div>
                 ) : data.lowData ? (
-                  <div className="inline-flex items-center gap-2 bg-amber-500/10 text-[#F5C842] border border-amber-500/20 rounded-lg px-3 py-1.5 text-xs font-semibold self-start sm:self-center">
+                  <div className="inline-flex items-center gap-2 bg-amber-500/10 text-[#f2ca50] border border-amber-500/20 rounded-full px-4 py-1.5 text-xs font-semibold self-start sm:self-center">
                     ⚠️ {t.lowDataWarning}
                   </div>
                 ) : null}
@@ -245,11 +249,11 @@ function SearchDashboardContent() {
               {/* Grid: Left: Score circle / warning, Right: Pros & Cons */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Score Card */}
-                <div className="bg-[#141418] border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden group">
+                <div className="glass-panel-premium rounded-[2rem] p-6 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden group border-white/5">
                   {/* Subtle hover background highlight */}
-                  <div className="absolute inset-0 bg-radial-gradient from-[rgba(245,200,66,0.03)] to-transparent opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
+                  <div className="absolute inset-0 bg-radial-gradient from-[rgba(242,202,80,0.03)] to-transparent opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
 
-                  <h3 className="text-gray-400 text-xs uppercase font-bold tracking-wider mb-4">
+                  <h3 className="text-on-surface-variant text-xs uppercase font-bold tracking-wider mb-4">
                     {t.unsponsoredScore}
                   </h3>
 
@@ -270,7 +274,7 @@ function SearchDashboardContent() {
                             cx="64"
                             cy="64"
                             r="54"
-                            stroke="#F5C842"
+                            stroke="#f2ca50"
                             strokeWidth="8"
                             fill="transparent"
                             strokeDasharray={2 * Math.PI * 54}
@@ -289,15 +293,15 @@ function SearchDashboardContent() {
                           </span>
                         </div>
                       </div>
-                      <p className="text-[11px] text-gray-500 leading-relaxed max-w-[220px] text-center mb-4">
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed max-w-[220px] text-center mb-4">
                         {t.aiConsensusDesc}
                       </p>
                     </div>
                   ) : data.lowData ? (
                     <div className="py-6 flex flex-col items-center">
                       <div className="text-amber-500 text-3xl mb-2">🤷‍♂️</div>
-                      <span className="text-[#F5C842] text-xl font-bold">N/A</span>
-                      <p className="text-xs text-gray-500 max-w-[200px] mt-2 leading-relaxed mb-4">
+                      <span className="text-[#f2ca50] text-xl font-bold">N/A</span>
+                      <p className="text-xs text-on-surface-variant max-w-[200px] mt-2 leading-relaxed mb-4">
                         {t.lowDataDesc}
                       </p>
                     </div>
@@ -318,7 +322,7 @@ function SearchDashboardContent() {
                             cx="64"
                             cy="64"
                             r="54"
-                            stroke="#F5C842"
+                            stroke="#f2ca50"
                             strokeWidth="8"
                             fill="transparent"
                             strokeDasharray={2 * Math.PI * 54}
@@ -337,7 +341,7 @@ function SearchDashboardContent() {
                           </span>
                         </div>
                       </div>
-                      <p className="text-[11px] text-gray-500 leading-relaxed max-w-[220px] text-center mb-4">
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed max-w-[220px] text-center mb-4">
                         {t.scoreDesc}
                       </p>
                     </div>
@@ -345,11 +349,11 @@ function SearchDashboardContent() {
                 </div>
 
                 {/* Pros and Cons Card */}
-                <div className="lg:col-span-2 bg-[#141418] border border-white/5 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+                <div className="lg:col-span-2 glass-panel-premium rounded-[2rem] p-6 shadow-lg flex flex-col justify-between border-white/5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {/* Pros column */}
                     <div>
-                      <h3 className="text-emerald-400 font-extrabold text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <h3 className="text-emerald-400 font-extrabold text-sm uppercase tracking-wider mb-4 flex items-center gap-2 font-display-lg">
                         <span className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center text-xs">✓</span>
                         {t.prosTitle}
                       </h3>
@@ -369,7 +373,7 @@ function SearchDashboardContent() {
 
                     {/* Cons column */}
                     <div>
-                      <h3 className="text-rose-400 font-extrabold text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <h3 className="text-rose-400 font-extrabold text-sm uppercase tracking-wider mb-4 flex items-center gap-2 font-display-lg">
                         <span className="w-5 h-5 rounded-full bg-rose-500/10 flex items-center justify-center text-xs">✗</span>
                         {t.consTitle}
                       </h3>
@@ -390,7 +394,7 @@ function SearchDashboardContent() {
 
                   {/* Best Deal Finder Widget */}
                   <div className="border-t border-white/5 mt-6 pt-6 flex flex-col gap-4">
-                    <h4 className="text-gray-400 font-extrabold text-xs uppercase tracking-wider">
+                    <h4 className="text-on-surface-variant font-extrabold text-xs uppercase tracking-wider">
                       {t.bestDealTitle}
                     </h4>
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -398,7 +402,7 @@ function SearchDashboardContent() {
                         href={`https://www.amazon.com/s?k=${encodeURIComponent(data.productName)}&tag=clearpick07-20`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 bg-[#F5C842] hover:bg-amber-400 active:scale-95 text-black font-bold text-sm px-6 py-3 rounded-xl transition shadow-lg shadow-amber-500/5 sm:flex-1"
+                        className="inline-flex items-center justify-center gap-2 bg-[#F5C842] hover:bg-[#D4A820] hover:shadow-[0_0_20px_rgba(242,202,80,0.3)] hover:scale-[1.01] active:scale-95 text-black font-bold text-sm px-6 py-3 rounded-xl transition duration-300 sm:flex-1 cursor-pointer"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -409,7 +413,7 @@ function SearchDashboardContent() {
                         href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(data.productName)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:text-white text-gray-300 font-bold text-sm px-6 py-3 rounded-xl transition active:scale-95 sm:flex-1"
+                        className="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:text-white text-gray-300 font-bold text-sm px-6 py-3 rounded-xl transition active:scale-95 sm:flex-1 cursor-pointer"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -422,8 +426,8 @@ function SearchDashboardContent() {
               </div>
 
               {/* Quotes Section (Unfiltered Voices) */}
-              <div className="bg-[#141418] border border-white/5 rounded-2xl p-6 shadow-lg">
-                <h3 className="text-[#F5C842] font-extrabold text-sm uppercase tracking-wider mb-4">
+              <div className="glass-panel-premium rounded-[2rem] p-6 shadow-lg border-white/5">
+                <h3 className="text-primary font-extrabold text-sm uppercase tracking-wider mb-4 font-display-lg">
                   {t.quotesTitle}
                 </h3>
                 {data.quotes.length > 0 ? (
@@ -431,7 +435,7 @@ function SearchDashboardContent() {
                     {data.quotes.map((quote, idx) => (
                       <div
                         key={idx}
-                        className="bg-[#1C1C22]/50 border border-white/5 rounded-xl p-4 flex flex-col justify-between gap-3 relative"
+                        className="bg-white/[0.02] border border-white/5 hover:border-primary/20 rounded-2xl p-5 flex flex-col justify-between gap-3 relative transition-all duration-300"
                       >
                         <span className="text-2xl text-white/10 absolute top-2 left-2 leading-none font-serif select-none">&ldquo;</span>
                         <p className="text-gray-300 text-sm italic relative z-10 leading-relaxed pt-2 pl-2">
@@ -449,8 +453,8 @@ function SearchDashboardContent() {
               </div>
 
               {/* Source Threads */}
-              <div className="bg-[#141418] border border-white/5 rounded-2xl p-6 shadow-lg">
-                <h3 className="text-gray-400 font-extrabold text-xs uppercase tracking-wider mb-3">
+              <div className="glass-panel-premium rounded-[2rem] p-6 shadow-lg border-white/5">
+                <h3 className="text-on-surface-variant font-extrabold text-xs uppercase tracking-wider mb-3">
                   {t.sourcesTitle}
                 </h3>
                 {data.threads.length > 0 ? (
@@ -461,10 +465,10 @@ function SearchDashboardContent() {
                         href={thread.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-xs text-gray-300 rounded-lg px-3.5 py-2 transition"
+                        className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 hover:bg-primary/10 hover:border-primary/30 text-xs text-gray-300 hover:text-primary rounded-xl px-4 py-2.5 transition duration-300"
                       >
                         <span>{thread.title.length > 40 ? `${thread.title.slice(0, 40)}...` : thread.title}</span>
-                        <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
                       </a>
@@ -479,21 +483,48 @@ function SearchDashboardContent() {
         )}
       </main>
 
-      {/* Feedback trigger button above footer */}
-      <FeedbackButton lang={lang} />
-
       {/* Footer */}
-      <footer className="z-10 text-xs text-gray-600 w-full text-center border-t border-white/5 py-6 flex flex-col sm:flex-row justify-between items-center gap-4 max-w-6xl mx-auto px-6">
-        <p>© {new Date().getFullYear()} ClearPick.ai. {t.footerAllRights}</p>
-        <div className="flex flex-wrap justify-center gap-4 text-gray-500">
-          <a href="mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai" className="hover:text-[#F5C842] transition cursor-pointer">{t.feedback}</a>
-        </div>
-        <div className="flex gap-4">
-          <span className="text-[#F5C842] font-semibold">{t.footerUnsponsored}</span>
-          <span className="text-gray-600">|</span>
-          <span>{t.footerPowered}</span>
+      <footer className="w-full pt-20 pb-20 border-t border-white/5 bg-surface-container-lowest" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-6 md:px-12 gap-12 w-full max-w-[1440px] mx-auto">
+          <div className="flex flex-col gap-6">
+            <div className="font-display-lg text-2xl font-extrabold text-white tracking-tighter">ClearPick.ai</div>
+            <p className="text-text-muted font-body-md text-sm max-w-md opacity-60">
+              © {new Date().getFullYear()} ClearPick.ai. {lang === 'he' ? 'מודיעין מוצרים המופק מקונסנזוס אנושי אותנטי. הדור הבא של צרכנות מבוססת אמת.' : 'Product intelligence extracted from authentic human consensus. The next generation of truth-based consumerism.'}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-x-12 gap-y-6">
+            <button type="button" onClick={() => setActiveModal('privacy')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.privacy}</button>
+            <button type="button" onClick={() => setActiveModal('terms')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.terms}</button>
+            <button type="button" onClick={() => setActiveModal('disclosure')} className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase cursor-pointer">{t.disclosure}</button>
+            <a className="text-text-muted font-label-caps text-[11px] tracking-widest hover:text-primary transition-colors uppercase" href="mailto:clearpick.ai@gmail.com?subject=Feedback%20for%20ClearPick.ai">{lang === 'he' ? 'יצירת קשר' : 'Contact Us'}</a>
+          </div>
         </div>
       </footer>
+
+      {/* Modals for legal disclosures */}
+      {activeModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-[fade-in_0.2s_ease-out]">
+          <div className="bg-[#141418] border border-white/10 rounded-2xl max-w-lg w-full p-8 shadow-2xl relative text-right" dir={isRTL ? 'rtl' : 'ltr'}>
+            <button
+              type="button"
+              onClick={() => setActiveModal(null)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-white transition text-lg cursor-pointer min-w-0 min-h-0 p-1"
+            >
+              ✕
+            </button>
+            <h3 className="text-lg font-bold text-[#f2ca50] mb-4">
+              {activeModal === 'terms' && t.terms}
+              {activeModal === 'privacy' && t.privacy}
+              {activeModal === 'disclosure' && t.disclosure}
+            </h3>
+            <p className="text-gray-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+              {activeModal === 'terms' && t.termsBody}
+              {activeModal === 'privacy' && t.privacyBody}
+              {activeModal === 'disclosure' && t.disclosureBody}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
